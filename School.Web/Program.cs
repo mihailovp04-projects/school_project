@@ -1,6 +1,10 @@
+using Microsoft.EntityFrameworkCore;
+using School.Data;
 using School.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<SchoolDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SchoolDb")));
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
