@@ -1,3 +1,4 @@
+using School.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 using School.Data;
 using School.Web.Components;
@@ -5,7 +6,9 @@ using School.Web.Components;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<SchoolDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SchoolDb")));
-
+// rep
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped<ISchoolClassRepository, SchoolClassRepository>();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
