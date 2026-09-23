@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using School.Domain;
 
-namespace School.Data.Repositories
+namespace School.Data.Repositories;
+
+public interface IGradeRepository
 {
-    internal class IGradeRepository
-    {
-    }
+    Task<List<Grade>> GetAllAsync();
+    Task<Grade?> GetByIdAsync(int id);
+    Task<List<Grade>> GetByStudentIdAsync(int studentId);
+    Task AddAsync(Grade grade);
+    Task UpdateAsync(Grade grade);
+    Task DeleteAsync(int id);
 }

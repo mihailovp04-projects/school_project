@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using School.Domain;
 
-namespace School.Data.Repositories
+namespace School.Data.Repositories;
+
+public interface IUserRepository
 {
-    internal class IUserRepository
-    {
-    }
+    Task<List<User>> GetAllAsync();
+    Task<User?> GetByIdAsync(int id);
+    Task<User?> GetByLoginAsync(string login);
+    Task AddAsync(User user);
+    Task UpdateAsync(User user);
+    Task DeleteAsync(int id);
 }
