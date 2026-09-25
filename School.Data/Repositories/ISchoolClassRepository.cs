@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using School.Domain;
 
-namespace School.Data.Repositories
+namespace School.Data.Repositories;
+
+public interface ISchoolClassRepository
 {
-    internal class ISchoolClassRepository
-    {
-    }
+    Task<List<SchoolClass>> GetAllAsync();
+    Task<SchoolClass?> GetByIdAsync(int id);
+    Task AddAsync(SchoolClass schoolClass);
+    Task UpdateAsync(SchoolClass schoolClass);
+    Task DeleteAsync(int id);
 }
