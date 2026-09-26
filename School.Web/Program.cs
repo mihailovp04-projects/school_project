@@ -16,6 +16,11 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 //services
 builder.Services.AddScoped<IGradeService, GradeService>();
+builder.Services.AddScoped<IStudentService, StudentService>();
+builder.Services.AddScoped<ISchoolClassService, SchoolClassService>();
+builder.Services.AddScoped<ISubjectService, SubjectService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
