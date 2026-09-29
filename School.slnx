@@ -2,5 +2,6 @@
   <Project Path="School.Data/School.Data.csproj" />
   <Project Path="School.Domain/School.Domain.csproj" />
   <Project Path="School.Services/School.Services.csproj" />
+  <Project Path="School.Tests/School.Tests.csproj" Id="7cc56a51-2c1c-487a-bac8-aa1527c0c3e5" />
   <Project Path="School.Web/School.Web.csproj" />
 </Solution>
