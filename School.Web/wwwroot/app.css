@@ -1,3 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+    --color-bg: #FAF8F3;
+    --color-sidebar: #2B3A32;
+    --color-ink: #232620;
+    --color-muted: #6B7268;
+    --color-accent: #C9963E;
+    --color-line: #DCD6C8;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+}
+
+body {
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+}
+
+h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+}
+
+    table th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid var(--color-ink);
+        font-weight: 500;
+        color: var(--color-muted);
+        font-size: 0.85rem;
+    }
+
+    table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-line);
+    }
+
+    table tr:hover {
+        background-color: rgba(201, 150, 62, 0.06);
+    }
+
+.btn-primary {
+    background-color: var(--color-accent);
+    border: none;
+    color: var(--color-ink);
+    padding: 0.6rem 1.25rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+    .btn-primary:hover {
+        background-color: #b8862f;
+    }
+
+.grade-badge {
+    display: inline-block;
+    min-width: 1.75rem;
+    text-align: center;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-weight: 600;
+    font-family: var(--font-body);
+}
+
+    .grade-badge.low {
+        background-color: #F3D9D5;
+        color: #8B3A2E;
+    }
+
+    .grade-badge.mid {
+        background-color: #F0E4C9;
+        color: #8A6A1F;
+    }
+
+    .grade-badge.high {
+        background-color: #DCE8D9;
+        color: #3E6B45;
+    }
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
