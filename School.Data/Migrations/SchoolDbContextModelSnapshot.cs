@@ -48,7 +48,7 @@ namespace School.Data.Migrations
 
                     b.HasIndex("SubjectId");
 
-                    b.ToTable("Grades");
+                    b.ToTable("Grades", (string)null);
                 });
 
             modelBuilder.Entity("School.Domain.SchoolClass", b =>
@@ -65,7 +65,7 @@ namespace School.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SchoolClasses");
+                    b.ToTable("SchoolClasses", (string)null);
                 });
 
             modelBuilder.Entity("School.Domain.Student", b =>
@@ -97,7 +97,7 @@ namespace School.Data.Migrations
 
                     b.HasIndex("SchoolClassId");
 
-                    b.ToTable("Students");
+                    b.ToTable("Students", (string)null);
                 });
 
             modelBuilder.Entity("School.Domain.Subject", b =>
@@ -114,7 +114,7 @@ namespace School.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Subjects");
+                    b.ToTable("Subjects", (string)null);
                 });
 
             modelBuilder.Entity("School.Domain.User", b =>
@@ -139,7 +139,7 @@ namespace School.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("SchoolClassSubject", b =>
@@ -154,7 +154,7 @@ namespace School.Data.Migrations
 
                     b.HasIndex("SubjectsId");
 
-                    b.ToTable("SchoolClassSubject");
+                    b.ToTable("SchoolClassSubject", (string)null);
                 });
 
             modelBuilder.Entity("School.Domain.Grade", b =>

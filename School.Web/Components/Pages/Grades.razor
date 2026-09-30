@@ -1,0 +1,274 @@
+﻿@page "/grades"
+@inject IGradeService GradeService
+@inject IStudentService StudentService
+@inject ISubjectService SubjectService
+@inject IJSRuntime JS
+
+<div class="page-header">
+    <h1>Журнал оценок</h1>
+</div>
+
+<div class="selector-row">
+    <label>Ученик:</label>
+    <select @bind="selectedStudentId" @bind:after="LoadStudentGrades">
+        <option value="0">-- выберите ученика --</option>
+        @if (students != null)
+        {
+            @foreach (var student in students)
+            {
+                <option value="@student.Id">@student.LastName @student.FirstName</option>
+            }
+        }
+    </select>
+</div>
+
+@if (selectedStudentId != 0)
+{
+    @if (subjectAverages != null && subjectAverages.Count > 0)
+    {
+        <div class="subject-averages">
+            @foreach (var item in subjectAverages)
+            {
+                <div class="stat-card">
+                    <div>
+                        <div class="stat-value">
+                            @item.Average.ToString("F2") <span class="stat-scale">/ 10</span>
+                        </div>
+                        <div class="stat-label">@item.SubjectName</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="toolbar">
+        @if (!showForm)
+        {
+            <button class="btn-primary" @onclick="ShowAddForm">Добавить оценку</button>
+        }
+    </div>
+
+    @if (showForm)
+    {
+        <div class="card">
+            <p class="section-title">@(editingId == null ? "Новая оценка" : "Редактирование оценки")</p>
+
+            <EditForm Model="formModel" OnValidSubmit="HandleSave" FormName="GradeForm">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form">
+                    <div class="form-group">
+                        <label>Предмет</label>
+                        <select @bind="formModel.SubjectId">
+                            <option value="0">-- выберите предмет --</option>
+                            @if (subjects != null)
+                            {
+                                @foreach (var subject in subjects)
+                                {
+                                    <option value="@subject.Id">@subject.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Оценка (1-10)</label>
+                        <InputNumber @bind-Value="formModel.Value" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Дата</label>
+                        <InputDate @bind-Value="formModel.Date" />
+                    </div>
+
+                    <div class="form-actions" style="display: flex; gap: 0.75rem;">
+                        <button type="submit" class="btn-primary">Сохранить</button>
+                        <button type="button" class="btn-secondary" @onclick="CancelForm">Отменить</button>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <p class="form-error">@errorMessage</p>
+                }
+            </EditForm>
+        </div>
+    }
+
+    <p class="section-title">История оценок</p>
+
+    @if (studentGrades == null)
+    {
+        <p class="muted">Загрузка...</p>
+    }
+    else if (studentGrades.Count == 0)
+    {
+        <div class="empty-state">У этого ученика пока нет оценок.</div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Предмет</th>
+                        <th>Оценка</th>
+                        <th>Дата</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var grade in studentGrades.OrderByDescending(g => g.Date))
+                    {
+                        <tr>
+                            <td>@grade.Subject.Name</td>
+                            <td>@GetGradeBadge(grade.Value)</td>
+                            <td>@grade.Date.ToShortDateString()</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn-link-action" @onclick="() => ShowEditForm(grade)">Изменить</button>
+                                    <button class="btn-link-action danger" @onclick="() => HandleDelete(grade.Id)">Удалить</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private List<Student>? students;
+    private List<Subject>? subjects;
+    private List<Grade>? studentGrades;
+    private List<SubjectAverage>? subjectAverages;
+    private Grade formModel = new() { Date = DateTime.Now };
+    private int? editingId;
+    private int selectedStudentId = 0;
+    private bool showForm = false;
+    private string? errorMessage;
+
+    private class SubjectAverage
+    {
+        public string SubjectName { get; set; } = string.Empty;
+        public double Average { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        students = await StudentService.GetAllAsync();
+        subjects = await SubjectService.GetAllAsync();
+    }
+
+    private async Task LoadStudentGrades()
+    {
+        showForm = false;
+        errorMessage = null;
+
+        if (selectedStudentId == 0)
+        {
+            studentGrades = null;
+            subjectAverages = null;
+            return;
+        }
+
+        studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
+        CalculateSubjectAverages();
+    }
+
+    private void CalculateSubjectAverages()
+    {
+        if (studentGrades == null)
+        {
+            subjectAverages = null;
+            return;
+        }
+
+        subjectAverages = studentGrades
+            .GroupBy(g => g.Subject.Name)
+            .Select(group => new SubjectAverage
+            {
+                SubjectName = group.Key,
+                Average = group.Average(g => g.Value)
+            })
+            .OrderBy(a => a.SubjectName)
+            .ToList();
+    }
+
+    private void ShowAddForm()
+    {
+        formModel = new() { Date = DateTime.Now };
+        editingId = null;
+        showForm = true;
+        errorMessage = null;
+    }
+
+    private void ShowEditForm(Grade grade)
+    {
+        formModel = new Grade
+        {
+            Id = grade.Id,
+            Value = grade.Value,
+            Date = grade.Date,
+            SubjectId = grade.SubjectId,
+            StudentId = grade.StudentId
+        };
+        editingId = grade.Id;
+        showForm = true;
+        errorMessage = null;
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        errorMessage = null;
+    }
+
+    private async Task HandleSave()
+    {
+        if (formModel.SubjectId == 0)
+        {
+            errorMessage = "Нужно выбрать предмет.";
+            return;
+        }
+
+        formModel.StudentId = selectedStudentId;
+
+        try
+        {
+            if (editingId == null)
+            {
+                await GradeService.AddAsync(formModel);
+            }
+            else
+            {
+                formModel.Id = editingId.Value;
+                await GradeService.UpdateAsync(formModel);
+            }
+
+            studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
+            CalculateSubjectAverages();
+            showForm = false;
+            errorMessage = null;
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить эту оценку?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await GradeService.DeleteAsync(id);
+        studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
+        CalculateSubjectAverages();
+    }
+}

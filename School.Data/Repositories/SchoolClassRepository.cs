@@ -49,4 +49,43 @@ public class SchoolClassRepository : ISchoolClassRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task AddSubjectAsync(int classId, int subjectId)
+    {
+        var schoolClass = await _context.SchoolClasses
+            .Include(c => c.Subjects)
+            .FirstOrDefaultAsync(c => c.Id == classId);
+
+        var subject = await _context.Subjects.FindAsync(subjectId);
+
+        if (schoolClass == null || subject == null)
+        {
+            return;
+        }
+
+        if (!schoolClass.Subjects.Any(s => s.Id == subjectId))
+        {
+            schoolClass.Subjects.Add(subject);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoveSubjectAsync(int classId, int subjectId)
+    {
+        var schoolClass = await _context.SchoolClasses
+            .Include(c => c.Subjects)
+            .FirstOrDefaultAsync(c => c.Id == classId);
+
+        if (schoolClass == null)
+        {
+            return;
+        }
+
+        var subject = schoolClass.Subjects.FirstOrDefault(s => s.Id == subjectId);
+        if (subject != null)
+        {
+            schoolClass.Subjects.Remove(subject);
+            await _context.SaveChangesAsync();
+        }
+    }
 }

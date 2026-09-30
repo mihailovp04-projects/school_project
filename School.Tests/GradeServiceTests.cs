@@ -2,6 +2,7 @@
 using School.Data.Repositories;
 using School.Domain;
 using School.Services.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace School.Tests;
 
@@ -13,7 +14,7 @@ public class GradeServiceTests
     public GradeServiceTests()
     {
         _repositoryMock = new Mock<IGradeRepository>();
-        _service = new GradeService(_repositoryMock.Object);
+        _service = new GradeService(_repositoryMock.Object, NullLogger<GradeService>.Instance);
     }
 
     [Fact]

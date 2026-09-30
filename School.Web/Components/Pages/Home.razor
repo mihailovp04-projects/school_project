@@ -1,7 +1,59 @@
 ﻿@page "/"
+@inject IStudentService StudentService
+@inject ISchoolClassService SchoolClassService
+@inject ISubjectService SubjectService
 
-<PageTitle>Home</PageTitle>
+<div class="page-header">
+    <h1>Школа</h1>
+    <p class="muted">Краткая сводка по учебному заведению</p>
+</div>
 
-<h1>Hello, world!</h1>
+@if (isLoading)
+{
+    <p class="muted">Загрузка...</p>
+}
+else
+{
+    <div class="subject-averages">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@studentsCount</div>
+                <div class="stat-label">Учеников</div>
+            </div>
+        </div>
 
-Welcome to your new app.
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@classesCount</div>
+                <div class="stat-label">Классов</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@subjectsCount</div>
+                <div class="stat-label">Предметов</div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private int studentsCount;
+    private int classesCount;
+    private int subjectsCount;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var students = await StudentService.GetAllAsync();
+        var classes = await SchoolClassService.GetAllAsync();
+        var subjects = await SubjectService.GetAllAsync();
+
+        studentsCount = students.Count;
+        classesCount = classes.Count;
+        subjectsCount = subjects.Count;
+
+        isLoading = false;
+    }
+}

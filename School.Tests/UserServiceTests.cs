@@ -2,6 +2,7 @@
 using School.Data.Repositories;
 using School.Domain;
 using School.Services.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace School.Tests;
 
@@ -13,7 +14,7 @@ public class UserServiceTests
     public UserServiceTests()
     {
         _repositoryMock = new Mock<IUserRepository>();
-        _service = new UserService(_repositoryMock.Object);
+        _service = new UserService(_repositoryMock.Object, NullLogger<UserService>.Instance);
     }
 
     [Fact]

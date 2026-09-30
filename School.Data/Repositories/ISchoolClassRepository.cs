@@ -9,4 +9,6 @@ public interface ISchoolClassRepository
     Task AddAsync(SchoolClass schoolClass);
     Task UpdateAsync(SchoolClass schoolClass);
     Task DeleteAsync(int id);
+    Task AddSubjectAsync(int classId, int subjectId);
+    Task RemoveSubjectAsync(int classId, int subjectId);
 }

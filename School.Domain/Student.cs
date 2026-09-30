@@ -1,15 +1,36 @@
-﻿namespace School.Domain;
+﻿using System.ComponentModel.DataAnnotations;
 
-public class Student
+namespace School.Domain;
+
+public class Student : IValidatableObject
 {
     public int Id { get; set; }
+
+    [Required(ErrorMessage = "Имя обязательно для заполнения.")]
+    [StringLength(50, ErrorMessage = "Имя не должно превышать 50 символов.")]
     public string FirstName { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "Фамилия обязательна для заполнения.")]
+    [StringLength(50, ErrorMessage = "Фамилия не должна превышать 50 символов.")]
     public string LastName { get; set; } = string.Empty;
+
     public DateTime BirthDate { get; set; }
+
+    [RegularExpression(@"^\+373\d{8}$", ErrorMessage = "Телефон должен быть в формате +373XXXXXXXX.")]
     public string? Phone { get; set; }
 
     public int SchoolClassId { get; set; }
     public SchoolClass SchoolClass { get; set; } = null!;
 
     public ICollection<Grade> Grades { get; set; } = new List<Grade>();
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (BirthDate == default || BirthDate > DateTime.Now)
+        {
+            yield return new ValidationResult(
+                "Укажите корректную дату рождения (не в будущем).",
+                new[] { nameof(BirthDate) });
+        }
+    }
 }

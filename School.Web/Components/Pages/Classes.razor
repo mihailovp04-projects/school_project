@@ -1,0 +1,255 @@
+﻿@page "/classes"
+@inject ISchoolClassService SchoolClassService
+@inject ISubjectService SubjectService
+@inject IJSRuntime JS
+
+<div class="page-header">
+    <h1>Классы</h1>
+</div>
+
+<div class="toolbar">
+    @if (!showForm)
+    {
+        <button class="btn-primary" @onclick="ShowAddForm">Добавить класс</button>
+    }
+</div>
+
+@if (showForm)
+{
+    <div class="card">
+        <p class="section-title">@(editingId == null ? "Новый класс" : "Редактирование класса")</p>
+
+        <EditForm Model="formModel" OnValidSubmit="HandleSave" FormName="ClassForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form">
+                <div class="form-group">
+                    <label>Название класса</label>
+                    <InputText @bind-Value="formModel.Name" placeholder="Например, 5-A" />
+                </div>
+
+                <div class="form-actions" style="display: flex; gap: 0.75rem;">
+                    <button type="submit" class="btn-primary">Сохранить</button>
+                    <button type="button" class="btn-secondary" @onclick="CancelForm">Отменить</button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <p class="form-error">@errorMessage</p>
+            }
+        </EditForm>
+    </div>
+}
+
+@if (schoolClasses == null)
+{
+    <p class="muted">Загрузка...</p>
+}
+else if (schoolClasses.Count == 0)
+{
+    <div class="empty-state">Классов пока нет.</div>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Учеников в классе</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var schoolClass in schoolClasses)
+                {
+                    <tr>
+                        <td>@schoolClass.Name</td>
+                        <td>@schoolClass.Students.Count</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="btn-link-action" @onclick="() => ToggleDetails(schoolClass.Id)">
+                                    @(expandedClassId == schoolClass.Id ? "Скрыть" : "Состав")
+                                </button>
+                                <button class="btn-link-action" @onclick="() => ShowEditForm(schoolClass)">Изменить</button>
+                                <button class="btn-link-action danger" @onclick="() => HandleDelete(schoolClass.Id)">Удалить</button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    @if (expandedClassId == schoolClass.Id)
+                    {
+                        <tr>
+                            <td colspan="3">
+                                <div class="class-details">
+                                    <div class="class-details-column">
+                                        <p class="section-title">Ученики класса</p>
+                                        @if (schoolClass.Students.Count == 0)
+                                        {
+                                            <p class="muted">В классе пока нет учеников.</p>
+                                        }
+                                        else
+                                        {
+                                            <ul class="plain-list">
+                                                @foreach (var student in schoolClass.Students)
+                                                {
+                                                    <li>@student.LastName @student.FirstName</li>
+                                                }
+                                            </ul>
+                                        }
+                                    </div>
+
+                                    <div class="class-details-column">
+                                        <p class="section-title">Предметы класса</p>
+                                        @if (schoolClass.Subjects.Count == 0)
+                                        {
+                                            <p class="muted">Предметы ещё не привязаны.</p>
+                                        }
+                                        else
+                                        {
+                                            <ul class="plain-list">
+                                                @foreach (var subject in schoolClass.Subjects)
+                                                {
+                                                    <li>
+                                                        @subject.Name
+                                                        <button class="btn-link-action danger" @onclick="() => HandleRemoveSubject(schoolClass.Id, subject.Id)">Убрать</button>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+
+                                        <div class="assign-subject-row">
+                                            <select @bind="selectedSubjectId">
+                                                <option value="0">-- выберите предмет --</option>
+                                                @if (subjects != null)
+                                                {
+                                                    @foreach (var subject in GetUnassignedSubjects(schoolClass))
+                                                    {
+                                                        <option value="@subject.Id">@subject.Name</option>
+                                                    }
+                                                }
+                                            </select>
+                                            <button class="btn-secondary" @onclick="() => HandleAssignSubject(schoolClass.Id)">Привязать</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<SchoolClass>? schoolClasses;
+    private List<Subject>? subjects;
+    private SchoolClass formModel = new();
+    private int? editingId;
+    private int? expandedClassId;
+    private int selectedSubjectId;
+    private bool showForm = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        schoolClasses = await SchoolClassService.GetAllAsync();
+        subjects = await SubjectService.GetAllAsync();
+    }
+
+    private void ShowAddForm()
+    {
+        formModel = new();
+        editingId = null;
+        showForm = true;
+        errorMessage = null;
+    }
+
+    private void ShowEditForm(SchoolClass schoolClass)
+    {
+        formModel = new SchoolClass { Id = schoolClass.Id, Name = schoolClass.Name };
+        editingId = schoolClass.Id;
+        showForm = true;
+        errorMessage = null;
+    }
+
+    private void CancelForm()
+    {
+        showForm = false;
+        errorMessage = null;
+    }
+
+    private async Task HandleSave()
+    {
+        try
+        {
+            if (editingId == null)
+            {
+                await SchoolClassService.AddAsync(formModel);
+            }
+            else
+            {
+                formModel.Id = editingId.Value;
+                await SchoolClassService.UpdateAsync(formModel);
+            }
+
+            schoolClasses = await SchoolClassService.GetAllAsync();
+            showForm = false;
+            errorMessage = null;
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task HandleDelete(int id)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этот класс?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await SchoolClassService.DeleteAsync(id);
+        schoolClasses = await SchoolClassService.GetAllAsync();
+    }
+
+    private void ToggleDetails(int classId)
+    {
+        expandedClassId = expandedClassId == classId ? null : classId;
+        selectedSubjectId = 0;
+    }
+
+    private IEnumerable<Subject> GetUnassignedSubjects(SchoolClass schoolClass)
+    {
+        if (subjects == null)
+        {
+            return Enumerable.Empty<Subject>();
+        }
+
+        var assignedIds = schoolClass.Subjects.Select(s => s.Id).ToHashSet();
+        return subjects.Where(s => !assignedIds.Contains(s.Id));
+    }
+
+    private async Task HandleAssignSubject(int classId)
+    {
+        if (selectedSubjectId == 0)
+        {
+            return;
+        }
+
+        await SchoolClassService.AssignSubjectAsync(classId, selectedSubjectId);
+        schoolClasses = await SchoolClassService.GetAllAsync();
+        selectedSubjectId = 0;
+    }
+
+    private async Task HandleRemoveSubject(int classId, int subjectId)
+    {
+        await SchoolClassService.RemoveSubjectAsync(classId, subjectId);
+        schoolClasses = await SchoolClassService.GetAllAsync();
+    }
+}
