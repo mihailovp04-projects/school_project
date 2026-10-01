@@ -8,6 +8,7 @@
     background-color: var(--color-sidebar);
     width: 260px;
     flex-shrink: 0;
+    position: relative;
 }
 
 .top-row {

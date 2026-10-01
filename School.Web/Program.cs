@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using School.Data;
 using School.Web.Components;
 using School.Services.Services;
+using Microsoft.AspNetCore.Components.Authorization;
+using School.Web.Services;
+using School.Services.Security;
+using School.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<SchoolDbContext>(options =>
@@ -20,6 +24,10 @@ builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<ISchoolClassService, SchoolClassService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IUserService, UserService>();
+//auth
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthStateProvider>());
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

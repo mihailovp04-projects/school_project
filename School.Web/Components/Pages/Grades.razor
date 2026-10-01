@@ -98,6 +98,17 @@
 
     <p class="section-title">История оценок</p>
 
+    <div class="selector-row">
+        <label>С:</label>
+        <input type="date" @bind="filterFrom" />
+        <label>По:</label>
+        <input type="date" @bind="filterTo" />
+        @if (filterFrom != null || filterTo != null)
+        {
+            <button class="btn-link-action" @onclick="ClearPeriodFilter">Сбросить период</button>
+        }
+    </div>
+
     @if (studentGrades == null)
     {
         <p class="muted">Загрузка...</p>
@@ -108,34 +119,43 @@
     }
     else
     {
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Предмет</th>
-                        <th>Оценка</th>
-                        <th>Дата</th>
-                        <th>Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var grade in studentGrades.OrderByDescending(g => g.Date))
-                    {
+        var filteredGrades = GetFilteredGrades();
+
+        if (filteredGrades.Count == 0)
+        {
+            <div class="empty-state">Нет оценок за выбранный период.</div>
+        }
+        else
+        {
+            <div class="table-container">
+                <table>
+                    <thead>
                         <tr>
-                            <td>@grade.Subject.Name</td>
-                            <td>@GetGradeBadge(grade.Value)</td>
-                            <td>@grade.Date.ToShortDateString()</td>
-                            <td>
-                                <div class="table-actions">
-                                    <button class="btn-link-action" @onclick="() => ShowEditForm(grade)">Изменить</button>
-                                    <button class="btn-link-action danger" @onclick="() => HandleDelete(grade.Id)">Удалить</button>
-                                </div>
-                            </td>
+                            <th>Предмет</th>
+                            <th>Оценка</th>
+                            <th>Дата</th>
+                            <th>Действия</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        @foreach (var grade in filteredGrades)
+                        {
+                            <tr>
+                                <td>@grade.Subject.Name</td>
+                                <td>@GetGradeBadge(grade.Value)</td>
+                                <td>@grade.Date.ToShortDateString()</td>
+                                <td>
+                                    <div class="table-actions">
+                                        <button class="btn-link-action" @onclick="() => ShowEditForm(grade)">Изменить</button>
+                                        <button class="btn-link-action danger" @onclick="() => HandleDelete(grade.Id)">Удалить</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     }
 }
 
@@ -149,6 +169,8 @@
     private int selectedStudentId = 0;
     private bool showForm = false;
     private string? errorMessage;
+    private DateTime? filterFrom;
+    private DateTime? filterTo;
 
     private class SubjectAverage
     {
@@ -166,6 +188,8 @@
     {
         showForm = false;
         errorMessage = null;
+        filterFrom = null;
+        filterTo = null;
 
         if (selectedStudentId == 0)
         {
@@ -176,6 +200,34 @@
 
         studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
         CalculateSubjectAverages();
+    }
+
+    private List<Grade> GetFilteredGrades()
+    {
+        if (studentGrades == null)
+        {
+            return new List<Grade>();
+        }
+
+        var result = studentGrades.AsEnumerable();
+
+        if (filterFrom.HasValue)
+        {
+            result = result.Where(g => g.Date.Date >= filterFrom.Value.Date);
+        }
+
+        if (filterTo.HasValue)
+        {
+            result = result.Where(g => g.Date.Date <= filterTo.Value.Date);
+        }
+
+        return result.OrderByDescending(g => g.Date).ToList();
+    }
+
+    private void ClearPeriodFilter()
+    {
+        filterFrom = null;
+        filterTo = null;
     }
 
     private void CalculateSubjectAverages()
@@ -271,4 +323,13 @@
         studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
         CalculateSubjectAverages();
     }
+
+    private RenderFragment GetGradeBadge(int value) => builder =>
+    {
+        var cssClass = value <= 4 ? "low" : value <= 7 ? "mid" : "high";
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", $"grade-badge {cssClass}");
+        builder.AddContent(2, value);
+        builder.CloseElement();
+    };
 }

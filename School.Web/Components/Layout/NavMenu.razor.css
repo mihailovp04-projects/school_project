@@ -47,3 +47,45 @@
         display: none;
     }
 }
+.nav-account {
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.nav-account-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-bottom: 0.75rem;
+}
+
+    .nav-account-info span:first-child {
+        color: #FAF8F3;
+        font-weight: 500;
+    }
+
+.nav-account-role {
+    font-size: 0.8rem;
+    color: #C9C5B8;
+}
+.nav-account ::deep .nav-link {
+    color: #C9C5B8;
+    padding: 0.4rem 0;
+    display: block;
+}
+
+    .nav-account ::deep .nav-link:hover {
+        color: #FAF8F3;
+    }
+
+.nav-account .btn-link-action {
+    color: #C9C5B8;
+}
+
+    .nav-account .btn-link-action:hover {
+        color: #FAF8F3;
+    }

@@ -1,0 +1,81 @@
+﻿@page "/register"
+@inject IUserService UserService
+@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <h1>Регистрация</h1>
+</div>
+
+<div class="card" style="max-width: 540px;">
+    <EditForm Model="registerModel" OnValidSubmit="HandleRegister" FormName="RegisterForm">
+        <div class="form">
+            <div class="form-group">
+                <label>Логин</label>
+                <InputText @bind-Value="registerModel.Login" />
+            </div>
+
+            <div class="form-group">
+                <label>Пароль</label>
+                <InputText type="password" @bind-Value="registerModel.Password" />
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Зарегистрироваться</button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="form-error">@errorMessage</p>
+        }
+    </EditForm>
+</div>
+
+@code {
+    private RegisterModel registerModel = new();
+    private string? errorMessage;
+
+    private class RegisterModel
+    {
+        public string Login { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    private async Task HandleRegister()
+    {
+        if (string.IsNullOrWhiteSpace(registerModel.Login) || string.IsNullOrWhiteSpace(registerModel.Password))
+        {
+            errorMessage = "Логин и пароль обязательны для заполнения.";
+            return;
+        }
+
+        var existingUser = await UserService.GetByLoginAsync(registerModel.Login);
+        if (existingUser != null)
+        {
+            errorMessage = "Пользователь с таким логином уже существует.";
+            return;
+        }
+
+        var allUsers = await UserService.GetAllAsync();
+        var assignedRole = allUsers.Count == 0 ? "Admin" : "Teacher";
+
+        var newUser = new User
+        {
+            Login = registerModel.Login,
+            PasswordHash = PasswordHasher.Hash(registerModel.Password),
+            Role = assignedRole
+        };
+
+        try
+        {
+            await UserService.AddAsync(newUser);
+            AuthStateProvider.SignIn(newUser.Login, newUser.Role);
+            Navigation.NavigateTo("/");
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

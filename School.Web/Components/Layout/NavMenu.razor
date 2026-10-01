@@ -1,4 +1,7 @@
-﻿<div class="top-row navbar navbar-dark">
+﻿@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<div class="top-row navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Школа</a>
     </div>
@@ -35,3 +38,27 @@
         </div>
     </nav>
 </div>
+
+<div class="nav-account">
+    <AuthorizeView>
+        <Authorized>
+            <div class="nav-account-info">
+                <span>@context.User.Identity?.Name</span>
+                <span class="nav-account-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</span>
+            </div>
+            <button class="btn-link-action" @onclick="HandleLogout">Выйти</button>
+        </Authorized>
+        <NotAuthorized>
+            <NavLink class="nav-link" href="login">Войти</NavLink>
+            <NavLink class="nav-link" href="register">Регистрация</NavLink>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    private void HandleLogout()
+    {
+        AuthStateProvider.SignOut();
+        Navigation.NavigateTo("/");
+    }
+}

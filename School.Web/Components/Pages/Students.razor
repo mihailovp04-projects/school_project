@@ -2,6 +2,7 @@
 @inject IStudentService StudentService
 @inject ISchoolClassService SchoolClassService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
 
 <div class="page-header">
     <h1>Ученики</h1>
@@ -21,7 +22,7 @@
     </select>
 
     <label>Фамилия:</label>
-    <input type="text" @bind="filterLastName" @bind:event="oninput" placeholder="Начните вводить фамилию" />
+    <input type="text" @bind="filterLastName" @bind:event="oninput" placeholder="Введите фамилию" />
 </div>
 
 <div class="toolbar">
@@ -127,7 +128,11 @@ else
                             <td>
                                 <div class="table-actions">
                                     <button class="btn-link-action" @onclick="() => ShowEditForm(student)">Изменить</button>
-                                    <button class="btn-link-action danger" @onclick="() => HandleDelete(student.Id)">Удалить</button>
+                                    <AuthorizeView Roles="Admin">
+    <Authorized>
+        <button class="btn-link-action danger" @onclick="() => HandleDelete(student.Id)">Удалить</button>
+    </Authorized>
+</AuthorizeView>
                                 </div>
                             </td>
                         </tr>
@@ -237,14 +242,22 @@ else
     }
 
     private async Task HandleDelete(int id)
-    {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этого ученика?");
-        if (!confirmed)
-        {
-            return;
-        }
+{
+    var authState = await AuthProvider.GetAuthenticationStateAsync();
 
-        await StudentService.DeleteAsync(id);
-        students = await StudentService.GetAllAsync();
+    if (!authState.User.IsInRole("Admin"))
+    {
+        errorMessage = "Удалять учеников может только администратор.";
+        return;
     }
+
+    var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этого ученика?");
+    if (!confirmed)
+    {
+        return;
+    }
+
+    await StudentService.DeleteAsync(id);
+    students = await StudentService.GetAllAsync();
+}
 }
