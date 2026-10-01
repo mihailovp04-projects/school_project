@@ -35,7 +35,16 @@ public class UserRepository : IUserRepository
 
     public async Task UpdateAsync(User user)
     {
-        _context.Users.Update(user);
+        var existing = await _context.Users.FindAsync(user.Id);
+        if (existing == null)
+        {
+            return;
+        }
+
+        existing.Login = user.Login;
+        existing.PasswordHash = user.PasswordHash;
+        existing.Role = user.Role;
+
         await _context.SaveChangesAsync();
     }
 

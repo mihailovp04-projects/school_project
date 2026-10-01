@@ -426,3 +426,34 @@ table thead {
         border-radius: 4px;
         font-family: var(--font-body);
     }
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 1.75rem;
+}
+
+.hero-text h1 {
+    margin: 0 0 0.3rem 0;
+}
+
+.hero-image svg {
+    width: 180px;
+    height: auto;
+}
+
+.stat-card-overall {
+    border-left-width: 6px;
+    margin-bottom: 1.5rem;
+}
+
+    .stat-card-overall .stat-value {
+        font-size: 3.25rem;
+    }
+
+.assign-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-line);
+}

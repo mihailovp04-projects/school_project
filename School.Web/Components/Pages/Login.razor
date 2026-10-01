@@ -1,58 +1,42 @@
 ﻿@page "/login"
-@inject IUserService UserService
-@inject CustomAuthStateProvider AuthStateProvider
-@inject NavigationManager Navigation
+@attribute [AllowAnonymous]
 
 <div class="page-header">
     <h1>Вход</h1>
 </div>
 
 <div class="card" style="max-width: 540px;">
-    <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="LoginForm">
+    <form method="post" action="/Account/Login">
+        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
         <div class="form">
             <div class="form-group">
                 <label>Логин</label>
-                <InputText @bind-Value="loginModel.Login" />
+                <input type="text" name="login" />
             </div>
 
             <div class="form-group">
                 <label>Пароль</label>
-                <InputText type="password" @bind-Value="loginModel.Password" />
+                <input type="password" name="password" />
             </div>
 
             <div class="form-actions">
                 <button type="submit" class="btn-primary">Войти</button>
             </div>
         </div>
+    </form>
 
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <p class="form-error">@errorMessage</p>
-        }
-    </EditForm>
+    @if (HasError)
+    {
+        <p class="form-error">Неверный логин или пароль.</p>
+    }
 </div>
 
 @code {
-    private LoginModel loginModel = new();
-    private string? errorMessage;
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
 
-    private class LoginModel
-    {
-        public string Login { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
+    [SupplyParameterFromQuery(Name = "error")]
+    public string? Error { get; set; }
 
-    private async Task HandleLogin()
-    {
-        var user = await UserService.GetByLoginAsync(loginModel.Login);
-
-        if (user == null || !PasswordHasher.Verify(loginModel.Password, user.PasswordHash))
-        {
-            errorMessage = "Неверный логин или пароль.";
-            return;
-        }
-
-        AuthStateProvider.SignIn(user.Login, user.Role);
-        Navigation.NavigateTo("/");
-    }
+    private bool HasError => Error == "1";
 }

@@ -44,7 +44,17 @@ public class GradeRepository : IGradeRepository
 
     public async Task UpdateAsync(Grade grade)
     {
-        _context.Grades.Update(grade);
+        var existing = await _context.Grades.FindAsync(grade.Id);
+        if (existing == null)
+        {
+            return;
+        }
+
+        existing.Value = grade.Value;
+        existing.Date = grade.Date;
+        existing.SubjectId = grade.SubjectId;
+        existing.StudentId = grade.StudentId;
+
         await _context.SaveChangesAsync();
     }
 

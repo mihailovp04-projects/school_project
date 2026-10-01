@@ -36,7 +36,14 @@ public class SchoolClassRepository : ISchoolClassRepository
 
     public async Task UpdateAsync(SchoolClass schoolClass)
     {
-        _context.SchoolClasses.Update(schoolClass);
+        var existing = await _context.SchoolClasses.FindAsync(schoolClass.Id);
+        if (existing == null)
+        {
+            return;
+        }
+
+        existing.Name = schoolClass.Name;
+
         await _context.SaveChangesAsync();
     }
 

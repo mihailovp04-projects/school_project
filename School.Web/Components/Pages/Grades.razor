@@ -1,8 +1,10 @@
 ﻿@page "/grades"
+@attribute [Authorize]
 @inject IGradeService GradeService
 @inject IStudentService StudentService
 @inject ISubjectService SubjectService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
 
 <div class="page-header">
     <h1>Журнал оценок</h1>
@@ -26,6 +28,15 @@
 {
     @if (subjectAverages != null && subjectAverages.Count > 0)
     {
+        <div class="stat-card stat-card-overall">
+            <div>
+                <div class="stat-value">
+                    @overallAverage.ToString("F2") <span class="stat-scale">/ 10</span>
+                </div>
+                <div class="stat-label">Общий средний балл</div>
+            </div>
+        </div>
+
         <div class="subject-averages">
             @foreach (var item in subjectAverages)
             {
@@ -147,7 +158,11 @@
                                 <td>
                                     <div class="table-actions">
                                         <button class="btn-link-action" @onclick="() => ShowEditForm(grade)">Изменить</button>
-                                        <button class="btn-link-action danger" @onclick="() => HandleDelete(grade.Id)">Удалить</button>
+                                        <AuthorizeView Roles="Admin">
+                                            <Authorized>
+                                                <button class="btn-link-action danger" @onclick="() => HandleDelete(grade.Id)">Удалить</button>
+                                            </Authorized>
+                                        </AuthorizeView>
                                     </div>
                                 </td>
                             </tr>
@@ -164,6 +179,7 @@
     private List<Subject>? subjects;
     private List<Grade>? studentGrades;
     private List<SubjectAverage>? subjectAverages;
+    private double overallAverage;
     private Grade formModel = new() { Date = DateTime.Now };
     private int? editingId;
     private int selectedStudentId = 0;
@@ -235,6 +251,7 @@
         if (studentGrades == null)
         {
             subjectAverages = null;
+            overallAverage = 0;
             return;
         }
 
@@ -247,6 +264,8 @@
             })
             .OrderBy(a => a.SubjectName)
             .ToList();
+
+        overallAverage = subjectAverages.Count > 0 ? subjectAverages.Average(a => a.Average) : 0;
     }
 
     private void ShowAddForm()
@@ -313,6 +332,12 @@
 
     private async Task HandleDelete(int id)
     {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        if (!authState.User.IsInRole("Admin"))
+        {
+            return;
+        }
+
         var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить эту оценку?");
         if (!confirmed)
         {

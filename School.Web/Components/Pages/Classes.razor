@@ -1,7 +1,9 @@
 ﻿@page "/classes"
+@attribute [Authorize]
 @inject ISchoolClassService SchoolClassService
 @inject ISubjectService SubjectService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthProvider
 
 <div class="page-header">
     <h1>Классы</h1>
@@ -43,6 +45,49 @@
     </div>
 }
 
+@if (assigningClass != null)
+{
+    <div class="card">
+        <p class="section-title">Предметы класса «@assigningClass.Name»</p>
+
+        @if (assigningClass.Subjects.Count > 0)
+        {
+            <ul class="plain-list">
+                @foreach (var subject in assigningClass.Subjects)
+                {
+                    <li>
+                        @subject.Name
+                        <AuthorizeView Roles="Admin">
+                            <Authorized>
+                                <button class="btn-link-action danger" @onclick="() => HandleRemoveSubject(subject.Id)">Убрать</button>
+                            </Authorized>
+                        </AuthorizeView>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="muted">Предметы ещё не привязаны.</p>
+        }
+
+        <div class="assign-subject-row">
+            <select @bind="selectedSubjectId">
+                <option value="0">-- выберите предмет --</option>
+                @if (subjects != null)
+                {
+                    @foreach (var subject in GetUnassignedSubjects(assigningClass))
+                    {
+                        <option value="@subject.Id">@subject.Name</option>
+                    }
+                }
+            </select>
+            <button class="btn-secondary" @onclick="HandleAssignSubject">Привязать</button>
+            <button class="btn-secondary" @onclick="CloseAssignForm">Закрыть</button>
+        </div>
+    </div>
+}
+
 @if (schoolClasses == null)
 {
     <p class="muted">Загрузка...</p>
@@ -73,8 +118,13 @@ else
                                 <button class="btn-link-action" @onclick="() => ToggleDetails(schoolClass.Id)">
                                     @(expandedClassId == schoolClass.Id ? "Скрыть" : "Состав")
                                 </button>
+                                <button class="btn-link-action" @onclick="() => OpenAssignForm(schoolClass)">Предметы</button>
                                 <button class="btn-link-action" @onclick="() => ShowEditForm(schoolClass)">Изменить</button>
-                                <button class="btn-link-action danger" @onclick="() => HandleDelete(schoolClass.Id)">Удалить</button>
+                                <AuthorizeView Roles="Admin">
+                                    <Authorized>
+                                        <button class="btn-link-action danger" @onclick="() => HandleDelete(schoolClass.Id)">Удалить</button>
+                                    </Authorized>
+                                </AuthorizeView>
                             </div>
                         </td>
                     </tr>
@@ -112,27 +162,10 @@ else
                                             <ul class="plain-list">
                                                 @foreach (var subject in schoolClass.Subjects)
                                                 {
-                                                    <li>
-                                                        @subject.Name
-                                                        <button class="btn-link-action danger" @onclick="() => HandleRemoveSubject(schoolClass.Id, subject.Id)">Убрать</button>
-                                                    </li>
+                                                    <li>@subject.Name</li>
                                                 }
                                             </ul>
                                         }
-
-                                        <div class="assign-subject-row">
-                                            <select @bind="selectedSubjectId">
-                                                <option value="0">-- выберите предмет --</option>
-                                                @if (subjects != null)
-                                                {
-                                                    @foreach (var subject in GetUnassignedSubjects(schoolClass))
-                                                    {
-                                                        <option value="@subject.Id">@subject.Name</option>
-                                                    }
-                                                }
-                                            </select>
-                                            <button class="btn-secondary" @onclick="() => HandleAssignSubject(schoolClass.Id)">Привязать</button>
-                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -148,6 +181,7 @@ else
     private List<SchoolClass>? schoolClasses;
     private List<Subject>? subjects;
     private SchoolClass formModel = new();
+    private SchoolClass? assigningClass;
     private int? editingId;
     private int? expandedClassId;
     private int selectedSubjectId;
@@ -208,6 +242,12 @@ else
 
     private async Task HandleDelete(int id)
     {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        if (!authState.User.IsInRole("Admin"))
+        {
+            return;
+        }
+
         var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этот класс?");
         if (!confirmed)
         {
@@ -221,7 +261,17 @@ else
     private void ToggleDetails(int classId)
     {
         expandedClassId = expandedClassId == classId ? null : classId;
+    }
+
+    private void OpenAssignForm(SchoolClass schoolClass)
+    {
+        assigningClass = schoolClass;
         selectedSubjectId = 0;
+    }
+
+    private void CloseAssignForm()
+    {
+        assigningClass = null;
     }
 
     private IEnumerable<Subject> GetUnassignedSubjects(SchoolClass schoolClass)
@@ -235,21 +285,34 @@ else
         return subjects.Where(s => !assignedIds.Contains(s.Id));
     }
 
-    private async Task HandleAssignSubject(int classId)
+    private async Task HandleAssignSubject()
     {
-        if (selectedSubjectId == 0)
+        if (selectedSubjectId == 0 || assigningClass == null)
         {
             return;
         }
 
-        await SchoolClassService.AssignSubjectAsync(classId, selectedSubjectId);
+        await SchoolClassService.AssignSubjectAsync(assigningClass.Id, selectedSubjectId);
         schoolClasses = await SchoolClassService.GetAllAsync();
+        assigningClass = schoolClasses.FirstOrDefault(c => c.Id == assigningClass.Id);
         selectedSubjectId = 0;
     }
 
-    private async Task HandleRemoveSubject(int classId, int subjectId)
+    private async Task HandleRemoveSubject(int subjectId)
     {
-        await SchoolClassService.RemoveSubjectAsync(classId, subjectId);
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        if (!authState.User.IsInRole("Admin"))
+        {
+            return;
+        }
+
+        if (assigningClass == null)
+        {
+            return;
+        }
+
+        await SchoolClassService.RemoveSubjectAsync(assigningClass.Id, subjectId);
         schoolClasses = await SchoolClassService.GetAllAsync();
+        assigningClass = schoolClasses.FirstOrDefault(c => c.Id == assigningClass.Id);
     }
 }

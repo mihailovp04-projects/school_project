@@ -34,7 +34,14 @@ public class SubjectRepository : ISubjectRepository
 
     public async Task UpdateAsync(Subject subject)
     {
-        _context.Subjects.Update(subject);
+        var existing = await _context.Subjects.FindAsync(subject.Id);
+        if (existing == null)
+        {
+            return;
+        }
+
+        existing.Name = subject.Name;
+
         await _context.SaveChangesAsync();
     }
 

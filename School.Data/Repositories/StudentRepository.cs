@@ -34,7 +34,18 @@ public class StudentRepository : IStudentRepository
 
     public async Task UpdateAsync(Student student)
     {
-        _context.Students.Update(student);
+        var existing = await _context.Students.FindAsync(student.Id);
+        if (existing == null)
+        {
+            return;
+        }
+
+        existing.FirstName = student.FirstName;
+        existing.LastName = student.LastName;
+        existing.BirthDate = student.BirthDate;
+        existing.Phone = student.Phone;
+        existing.SchoolClassId = student.SchoolClassId;
+
         await _context.SaveChangesAsync();
     }
 
