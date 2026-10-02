@@ -1,0 +1,12 @@
+﻿.home-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    background-image: linear-gradient(rgba(35, 38, 32, 0.25), rgba(35, 38, 32, 0.25)), url('/images/board.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
