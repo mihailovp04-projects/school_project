@@ -34,40 +34,49 @@ public class SchoolClassRepository : ISchoolClassRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(SchoolClass schoolClass)
+    public async Task<bool> UpdateAsync(SchoolClass schoolClass)
     {
         var existing = await _context.SchoolClasses.FindAsync(schoolClass.Id);
         if (existing == null)
         {
-            return;
+            return false;
         }
 
         existing.Name = schoolClass.Name;
-
         await _context.SaveChangesAsync();
+        return true;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
         var schoolClass = await _context.SchoolClasses.FindAsync(id);
-        if (schoolClass != null)
+        if (schoolClass == null)
         {
-            _context.SchoolClasses.Remove(schoolClass);
-            await _context.SaveChangesAsync();
+            return false;
         }
+
+        _context.SchoolClasses.Remove(schoolClass);
+        await _context.SaveChangesAsync();
+        return true;
     }
 
-    public async Task AddSubjectAsync(int classId, int subjectId)
+    public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
+    {
+        return await _context.SchoolClasses
+            .Where(c => excludeId == null || c.Id != excludeId)
+            .AnyAsync(c => c.Name.ToLower() == name.ToLower());
+    }
+
+    public async Task<bool> AddSubjectAsync(int classId, int subjectId)
     {
         var schoolClass = await _context.SchoolClasses
             .Include(c => c.Subjects)
             .FirstOrDefaultAsync(c => c.Id == classId);
-
         var subject = await _context.Subjects.FindAsync(subjectId);
 
         if (schoolClass == null || subject == null)
         {
-            return;
+            return false;
         }
 
         if (!schoolClass.Subjects.Any(s => s.Id == subjectId))
@@ -75,9 +84,11 @@ public class SchoolClassRepository : ISchoolClassRepository
             schoolClass.Subjects.Add(subject);
             await _context.SaveChangesAsync();
         }
+
+        return true;
     }
 
-    public async Task RemoveSubjectAsync(int classId, int subjectId)
+    public async Task<bool> RemoveSubjectAsync(int classId, int subjectId)
     {
         var schoolClass = await _context.SchoolClasses
             .Include(c => c.Subjects)
@@ -85,14 +96,17 @@ public class SchoolClassRepository : ISchoolClassRepository
 
         if (schoolClass == null)
         {
-            return;
+            return false;
         }
 
         var subject = schoolClass.Subjects.FirstOrDefault(s => s.Id == subjectId);
-        if (subject != null)
+        if (subject == null)
         {
-            schoolClass.Subjects.Remove(subject);
-            await _context.SaveChangesAsync();
+            return false;
         }
+
+        schoolClass.Subjects.Remove(subject);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

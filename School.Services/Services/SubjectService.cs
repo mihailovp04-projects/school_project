@@ -28,44 +28,48 @@ public class SubjectService : ISubjectService
     public async Task AddAsync(Subject subject)
     {
         ValidateSubject(subject);
-        await CheckDuplicateNameAsync(subject);
+
+        if (await _subjectRepository.ExistsByNameAsync(subject.Name))
+        {
+            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+        }
+
         await _subjectRepository.AddAsync(subject);
         _logger.LogInformation("Subject added: {Name} (Id: {Id})", subject.Name, subject.Id);
     }
 
-    public async Task UpdateAsync(Subject subject)
+    public async Task<bool> UpdateAsync(Subject subject)
     {
         ValidateSubject(subject);
-        await _subjectRepository.UpdateAsync(subject);
-        _logger.LogInformation("Subject updated: Id {Id}", subject.Id);
+
+        if (await _subjectRepository.ExistsByNameAsync(subject.Name, subject.Id))
+        {
+            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+        }
+
+        var updated = await _subjectRepository.UpdateAsync(subject);
+        if (updated)
+        {
+            _logger.LogInformation("Subject updated: Id {Id}", subject.Id);
+        }
+        return updated;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
-        await _subjectRepository.DeleteAsync(id);
-        _logger.LogInformation("Subject deleted: Id {Id}", id);
+        var deleted = await _subjectRepository.DeleteAsync(id);
+        if (deleted)
+        {
+            _logger.LogInformation("Subject deleted: Id {Id}", id);
+        }
+        return deleted;
     }
 
     private void ValidateSubject(Subject subject)
     {
         if (string.IsNullOrWhiteSpace(subject.Name))
         {
-            _logger.LogWarning("Subject validation failed: empty name");
             throw new ArgumentException("Название предмета обязательно для заполнения.");
-        }
-    }
-
-    private async Task CheckDuplicateNameAsync(Subject subject)
-    {
-        var existingSubjects = await _subjectRepository.GetAllAsync();
-
-        var duplicate = existingSubjects.Any(s =>
-            string.Equals(s.Name, subject.Name, StringComparison.OrdinalIgnoreCase));
-
-        if (duplicate)
-        {
-            _logger.LogWarning("Duplicate subject name attempted: {Name}", subject.Name);
-            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
         }
     }
 }

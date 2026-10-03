@@ -33,12 +33,12 @@ public class UserRepository : IUserRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(User user)
+    public async Task<bool> UpdateAsync(User user)
     {
         var existing = await _context.Users.FindAsync(user.Id);
         if (existing == null)
         {
-            return;
+            return false;
         }
 
         existing.Login = user.Login;
@@ -46,15 +46,19 @@ public class UserRepository : IUserRepository
         existing.Role = user.Role;
 
         await _context.SaveChangesAsync();
+        return true;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
         var user = await _context.Users.FindAsync(id);
-        if (user != null)
+        if (user == null)
         {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            return false;
         }
+
+        _context.Users.Remove(user);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

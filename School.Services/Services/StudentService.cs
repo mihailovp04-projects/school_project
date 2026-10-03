@@ -32,30 +32,36 @@ public class StudentService : IStudentService
         _logger.LogInformation("Student added: {FirstName} {LastName} (Id: {Id})", student.FirstName, student.LastName, student.Id);
     }
 
-    public async Task UpdateAsync(Student student)
+    public async Task<bool> UpdateAsync(Student student)
     {
         ValidateStudent(student);
-        await _studentRepository.UpdateAsync(student);
-        _logger.LogInformation("Student updated: Id {Id}", student.Id);
+        var updated = await _studentRepository.UpdateAsync(student);
+        if (updated)
+        {
+            _logger.LogInformation("Student updated: Id {Id}", student.Id);
+        }
+        return updated;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
-        await _studentRepository.DeleteAsync(id);
-        _logger.LogInformation("Student deleted: Id {Id}", id);
+        var deleted = await _studentRepository.DeleteAsync(id);
+        if (deleted)
+        {
+            _logger.LogInformation("Student deleted: Id {Id}", id);
+        }
+        return deleted;
     }
 
     private void ValidateStudent(Student student)
     {
         if (string.IsNullOrWhiteSpace(student.FirstName) || string.IsNullOrWhiteSpace(student.LastName))
         {
-            _logger.LogWarning("Student validation failed: empty name or last name");
             throw new ArgumentException("Имя и фамилия ученика обязательны для заполнения.");
         }
 
         if (student.BirthDate > DateTime.Now)
         {
-            _logger.LogWarning("Student validation failed: birth date in the future");
             throw new ArgumentException("Дата рождения не может быть в будущем.");
         }
     }

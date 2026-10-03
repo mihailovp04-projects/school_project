@@ -7,8 +7,8 @@ public interface ISchoolClassService
     Task<List<SchoolClass>> GetAllAsync();
     Task<SchoolClass?> GetByIdAsync(int id);
     Task AddAsync(SchoolClass schoolClass);
-    Task UpdateAsync(SchoolClass schoolClass);
-    Task DeleteAsync(int id);
+    Task<bool> UpdateAsync(SchoolClass schoolClass);
+    Task<bool> DeleteAsync(int id);
     Task AssignSubjectAsync(int classId, int subjectId);
     Task RemoveSubjectAsync(int classId, int subjectId);
 }

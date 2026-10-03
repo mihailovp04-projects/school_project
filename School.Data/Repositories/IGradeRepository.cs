@@ -8,6 +8,6 @@ public interface IGradeRepository
     Task<Grade?> GetByIdAsync(int id);
     Task<List<Grade>> GetByStudentIdAsync(int studentId);
     Task AddAsync(Grade grade);
-    Task UpdateAsync(Grade grade);
-    Task DeleteAsync(int id);
+    Task<bool> UpdateAsync(Grade grade);
+    Task<bool> DeleteAsync(int id);
 }

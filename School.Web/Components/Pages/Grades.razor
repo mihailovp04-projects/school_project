@@ -26,17 +26,20 @@
 
 @if (selectedStudentId != 0)
 {
-    @if (subjectAverages != null && subjectAverages.Count > 0)
+    @if (overallAverage.HasValue)
     {
         <div class="stat-card stat-card-overall">
             <div>
                 <div class="stat-value">
-                    @overallAverage.ToString("F2") <span class="stat-scale">/ 10</span>
+                    @overallAverage.Value.ToString("F2") <span class="stat-scale">/ 10</span>
                 </div>
                 <div class="stat-label">Общий средний балл</div>
             </div>
         </div>
+    }
 
+    @if (subjectAverages != null && subjectAverages.Count > 0)
+    {
         <div class="subject-averages">
             @foreach (var item in subjectAverages)
             {
@@ -179,7 +182,7 @@
     private List<Subject>? subjects;
     private List<Grade>? studentGrades;
     private List<SubjectAverage>? subjectAverages;
-    private double overallAverage;
+    private double? overallAverage;
     private Grade formModel = new() { Date = DateTime.Now };
     private int? editingId;
     private int selectedStudentId = 0;
@@ -211,10 +214,12 @@
         {
             studentGrades = null;
             subjectAverages = null;
+            overallAverage = null;
             return;
         }
 
         studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
+        overallAverage = await GradeService.GetAverageGradeAsync(selectedStudentId);
         CalculateSubjectAverages();
     }
 
@@ -251,7 +256,6 @@
         if (studentGrades == null)
         {
             subjectAverages = null;
-            overallAverage = 0;
             return;
         }
 
@@ -264,8 +268,6 @@
             })
             .OrderBy(a => a.SubjectName)
             .ToList();
-
-        overallAverage = subjectAverages.Count > 0 ? subjectAverages.Average(a => a.Average) : 0;
     }
 
     private void ShowAddForm()
@@ -320,6 +322,7 @@
             }
 
             studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
+            overallAverage = await GradeService.GetAverageGradeAsync(selectedStudentId);
             CalculateSubjectAverages();
             showForm = false;
             errorMessage = null;
@@ -346,6 +349,7 @@
 
         await GradeService.DeleteAsync(id);
         studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
+        overallAverage = await GradeService.GetAverageGradeAsync(selectedStudentId);
         CalculateSubjectAverages();
     }
 

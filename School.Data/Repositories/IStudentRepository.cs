@@ -7,6 +7,6 @@ public interface IStudentRepository
     Task<List<Student>> GetAllAsync();
     Task<Student?> GetByIdAsync(int id);
     Task AddAsync(Student student);
-    Task UpdateAsync(Student student);
-    Task DeleteAsync(int id);
+    Task<bool> UpdateAsync(Student student);
+    Task<bool> DeleteAsync(int id);
 }

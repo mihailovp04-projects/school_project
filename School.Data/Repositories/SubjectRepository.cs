@@ -32,26 +32,36 @@ public class SubjectRepository : ISubjectRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(Subject subject)
+    public async Task<bool> UpdateAsync(Subject subject)
     {
         var existing = await _context.Subjects.FindAsync(subject.Id);
         if (existing == null)
         {
-            return;
+            return false;
         }
 
         existing.Name = subject.Name;
-
         await _context.SaveChangesAsync();
+        return true;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
         var subject = await _context.Subjects.FindAsync(id);
-        if (subject != null)
+        if (subject == null)
         {
-            _context.Subjects.Remove(subject);
-            await _context.SaveChangesAsync();
+            return false;
         }
+
+        _context.Subjects.Remove(subject);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
+    {
+        return await _context.Subjects
+            .Where(s => excludeId == null || s.Id != excludeId)
+            .AnyAsync(s => s.Name.ToLower() == name.ToLower());
     }
 }

@@ -42,12 +42,12 @@ public class GradeRepository : IGradeRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(Grade grade)
+    public async Task<bool> UpdateAsync(Grade grade)
     {
         var existing = await _context.Grades.FindAsync(grade.Id);
         if (existing == null)
         {
-            return;
+            return false;
         }
 
         existing.Value = grade.Value;
@@ -56,15 +56,19 @@ public class GradeRepository : IGradeRepository
         existing.StudentId = grade.StudentId;
 
         await _context.SaveChangesAsync();
+        return true;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
         var grade = await _context.Grades.FindAsync(id);
-        if (grade != null)
+        if (grade == null)
         {
-            _context.Grades.Remove(grade);
-            await _context.SaveChangesAsync();
+            return false;
         }
+
+        _context.Grades.Remove(grade);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

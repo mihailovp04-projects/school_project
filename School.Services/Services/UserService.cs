@@ -37,30 +37,36 @@ public class UserService : IUserService
         _logger.LogInformation("User added: {Login} (Role: {Role})", user.Login, user.Role);
     }
 
-    public async Task UpdateAsync(User user)
+    public async Task<bool> UpdateAsync(User user)
     {
         ValidateUser(user);
-        await _userRepository.UpdateAsync(user);
-        _logger.LogInformation("User updated: Id {Id}", user.Id);
+        var updated = await _userRepository.UpdateAsync(user);
+        if (updated)
+        {
+            _logger.LogInformation("User updated: Id {Id}", user.Id);
+        }
+        return updated;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
-        await _userRepository.DeleteAsync(id);
-        _logger.LogInformation("User deleted: Id {Id}", id);
+        var deleted = await _userRepository.DeleteAsync(id);
+        if (deleted)
+        {
+            _logger.LogInformation("User deleted: Id {Id}", id);
+        }
+        return deleted;
     }
 
     private void ValidateUser(User user)
     {
         if (string.IsNullOrWhiteSpace(user.Login))
         {
-            _logger.LogWarning("User validation failed: empty login");
             throw new ArgumentException("Логин обязателен для заполнения.");
         }
 
         if (user.Role != "Admin" && user.Role != "Teacher")
         {
-            _logger.LogWarning("User validation failed: invalid role {Role}", user.Role);
             throw new ArgumentException("Роль должна быть либо 'Admin', либо 'Teacher'.");
         }
     }

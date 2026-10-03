@@ -32,12 +32,12 @@ public class StudentRepository : IStudentRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(Student student)
+    public async Task<bool> UpdateAsync(Student student)
     {
         var existing = await _context.Students.FindAsync(student.Id);
         if (existing == null)
         {
-            return;
+            return false;
         }
 
         existing.FirstName = student.FirstName;
@@ -47,15 +47,19 @@ public class StudentRepository : IStudentRepository
         existing.SchoolClassId = student.SchoolClassId;
 
         await _context.SaveChangesAsync();
+        return true;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
         var student = await _context.Students.FindAsync(id);
-        if (student != null)
+        if (student == null)
         {
-            _context.Students.Remove(student);
-            await _context.SaveChangesAsync();
+            return false;
         }
+
+        _context.Students.Remove(student);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

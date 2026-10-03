@@ -30,13 +30,13 @@ public class GradeService : IGradeService
         return await _gradeRepository.GetByStudentIdAsync(studentId);
     }
 
-    public async Task<double> GetAverageGradeAsync(int studentId)
+    public async Task<double?> GetAverageGradeAsync(int studentId)
     {
         var grades = await _gradeRepository.GetByStudentIdAsync(studentId);
 
         if (grades.Count == 0)
         {
-            return 0;
+            return null;
         }
 
         return grades.Average(g => g.Value);
@@ -49,30 +49,36 @@ public class GradeService : IGradeService
         _logger.LogInformation("Grade added: StudentId {StudentId}, SubjectId {SubjectId}, Value {Value}", grade.StudentId, grade.SubjectId, grade.Value);
     }
 
-    public async Task UpdateAsync(Grade grade)
+    public async Task<bool> UpdateAsync(Grade grade)
     {
         ValidateGrade(grade);
-        await _gradeRepository.UpdateAsync(grade);
-        _logger.LogInformation("Grade updated: Id {Id}", grade.Id);
+        var updated = await _gradeRepository.UpdateAsync(grade);
+        if (updated)
+        {
+            _logger.LogInformation("Grade updated: Id {Id}", grade.Id);
+        }
+        return updated;
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id)
     {
-        await _gradeRepository.DeleteAsync(id);
-        _logger.LogInformation("Grade deleted: Id {Id}", id);
+        var deleted = await _gradeRepository.DeleteAsync(id);
+        if (deleted)
+        {
+            _logger.LogInformation("Grade deleted: Id {Id}", id);
+        }
+        return deleted;
     }
 
     private void ValidateGrade(Grade grade)
     {
         if (grade.Value < 1 || grade.Value > 10)
         {
-            _logger.LogWarning("Grade validation failed: value {Value} out of range", grade.Value);
             throw new ArgumentException("Оценка должна быть в диапазоне от 1 до 10.");
         }
 
         if (grade.Date > DateTime.Now)
         {
-            _logger.LogWarning("Grade validation failed: date in the future");
             throw new ArgumentException("Дата оценки не может быть в будущем.");
         }
     }
