@@ -44,6 +44,7 @@
                 <span class="nav-account-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</span>
             </div>
             <form method="post" action="/Account/Logout">
+                <AntiforgeryToken />
                 <button class="btn-link-action" type="submit">Выйти</button>
             </form>
         </Authorized>

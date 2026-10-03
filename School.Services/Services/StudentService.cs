@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
 
@@ -45,12 +46,19 @@ public class StudentService : IStudentService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var deleted = await _studentRepository.DeleteAsync(id);
-        if (deleted)
+        try
         {
-            _logger.LogInformation("Student deleted: Id {Id}", id);
+            var deleted = await _studentRepository.DeleteAsync(id);
+            if (deleted)
+            {
+                _logger.LogInformation("Student deleted: Id {Id}", id);
+            }
+            return deleted;
         }
-        return deleted;
+        catch (DbUpdateException)
+        {
+            throw new ArgumentException("Нельзя удалить ученика, у которого есть оценки.");
+        }
     }
 
     private void ValidateStudent(Student student)

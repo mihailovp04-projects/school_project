@@ -7,6 +7,7 @@
 
 <div class="card" style="max-width: 540px;">
     <form method="post" action="/Account/Login">
+        <AntiforgeryToken />
         <input type="hidden" name="returnUrl" value="@ReturnUrl" />
         <div class="form">
             <div class="form-group">

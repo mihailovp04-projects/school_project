@@ -22,5 +22,31 @@ public class SchoolDbContext : DbContext
         modelBuilder.Entity<SchoolClass>()
             .HasMany(c => c.Subjects)
             .WithMany(s => s.SchoolClasses);
+
+        modelBuilder.Entity<Student>()
+            .HasOne(s => s.SchoolClass)
+            .WithMany(c => c.Students)
+            .HasForeignKey(s => s.SchoolClassId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Grade>()
+            .HasOne(g => g.Student)
+            .WithMany(s => s.Grades)
+            .HasForeignKey(g => g.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Grade>()
+            .HasOne(g => g.Subject)
+            .WithMany(s => s.Grades)
+            .HasForeignKey(g => g.SubjectId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.Login)
+            .HasMaxLength(256);
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Login)
+            .IsUnique();
     }
 }

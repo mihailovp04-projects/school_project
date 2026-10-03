@@ -32,6 +32,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     .AddCookie(options =>
     {
         options.LoginPath = "/login";
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
@@ -63,7 +67,10 @@ app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userS
     var user = await userService.GetByLoginAsync(login);
     if (user == null || !PasswordHasher.Verify(password, user.PasswordHash))
     {
-        return Results.Redirect("/login?error=1");
+        var failureUrl = IsLocalUrl(returnUrl)
+            ? $"/login?error=1&returnUrl={Uri.EscapeDataString(returnUrl!)}"
+            : "/login?error=1";
+        return Results.Redirect(failureUrl);
     }
 
     var claims = new List<Claim>
@@ -75,7 +82,7 @@ app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userS
     await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
     return Results.Redirect(IsLocalUrl(returnUrl) ? returnUrl! : "/");
-}).DisableAntiforgery();
+});
 
 app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService userService, [FromForm] string login, [FromForm] string password) =>
 {
@@ -111,13 +118,13 @@ app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService us
     await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
     return Results.Redirect("/");
-}).DisableAntiforgery();
+});
 
 app.MapPost("/Account/Logout", async (HttpContext httpContext) =>
 {
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Redirect("/");
-}).DisableAntiforgery();
+});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

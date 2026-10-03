@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
 
@@ -57,12 +58,19 @@ public class SubjectService : ISubjectService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var deleted = await _subjectRepository.DeleteAsync(id);
-        if (deleted)
+        try
         {
-            _logger.LogInformation("Subject deleted: Id {Id}", id);
+            var deleted = await _subjectRepository.DeleteAsync(id);
+            if (deleted)
+            {
+                _logger.LogInformation("Subject deleted: Id {Id}", id);
+            }
+            return deleted;
         }
-        return deleted;
+        catch (DbUpdateException)
+        {
+            throw new ArgumentException("Нельзя удалить предмет, по которому уже есть оценки.");
+        }
     }
 
     private void ValidateSubject(Subject subject)
