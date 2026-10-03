@@ -1,8 +1,8 @@
-﻿using Moq;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using School.Data.Repositories;
 using School.Domain;
 using School.Services.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace School.Tests;
 
@@ -14,6 +14,9 @@ public class SubjectServiceTests
     public SubjectServiceTests()
     {
         _repositoryMock = new Mock<ISubjectRepository>();
+        _repositoryMock
+            .Setup(r => r.GetAllAsync())
+            .ReturnsAsync(new List<Subject>());
         _service = new SubjectService(_repositoryMock.Object, NullLogger<SubjectService>.Instance);
     }
 

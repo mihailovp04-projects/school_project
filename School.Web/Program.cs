@@ -53,6 +53,11 @@ app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
 
+static bool IsLocalUrl(string? url) =>
+    !string.IsNullOrEmpty(url)
+    && url[0] == '/'
+    && (url.Length == 1 || (url[1] != '/' && url[1] != '\\'));
+
 app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userService, [FromForm] string login, [FromForm] string password, [FromForm] string? returnUrl) =>
 {
     var user = await userService.GetByLoginAsync(login);
@@ -69,11 +74,16 @@ app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userS
     var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
     await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
 
-    return Results.Redirect(string.IsNullOrEmpty(returnUrl) ? "/" : returnUrl);
+    return Results.Redirect(IsLocalUrl(returnUrl) ? returnUrl! : "/");
 }).DisableAntiforgery();
 
 app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService userService, [FromForm] string login, [FromForm] string password) =>
 {
+    if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+    {
+        return Results.Redirect("/register?error=2");
+    }
+
     var existing = await userService.GetByLoginAsync(login);
     if (existing != null)
     {
