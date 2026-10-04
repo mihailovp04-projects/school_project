@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Services.Validation;
 
 namespace School.Services.Services;
 
@@ -28,7 +29,7 @@ public class SubjectService : ISubjectService
 
     public async Task AddAsync(Subject subject)
     {
-        ValidateSubject(subject);
+        EntityValidator.Validate(subject);
 
         if (await _subjectRepository.ExistsByNameAsync(subject.Name))
         {
@@ -41,7 +42,7 @@ public class SubjectService : ISubjectService
 
     public async Task<bool> UpdateAsync(Subject subject)
     {
-        ValidateSubject(subject);
+        EntityValidator.Validate(subject);
 
         if (await _subjectRepository.ExistsByNameAsync(subject.Name, subject.Id))
         {
@@ -70,14 +71,6 @@ public class SubjectService : ISubjectService
         catch (DbUpdateException)
         {
             throw new ArgumentException("Нельзя удалить предмет, по которому уже есть оценки.");
-        }
-    }
-
-    private void ValidateSubject(Subject subject)
-    {
-        if (string.IsNullOrWhiteSpace(subject.Name))
-        {
-            throw new ArgumentException("Название предмета обязательно для заполнения.");
         }
     }
 }

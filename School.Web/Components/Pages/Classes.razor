@@ -28,7 +28,7 @@
             <div class="form">
                 <div class="form-group">
                     <label>Название класса</label>
-                    <InputText @bind-Value="formModel.Name" placeholder="Например, 5-A" />
+                    <InputText @bind-Value="formModel.Name" placeholder="Например, 5-А" />
                 </div>
 
                 <div class="form-actions" style="display: flex; gap: 0.75rem;">
@@ -238,6 +238,10 @@ else
         {
             errorMessage = ex.Message;
         }
+        catch (Exception)
+        {
+            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
+        }
     }
 
     private async Task HandleDelete(int id)
@@ -245,6 +249,7 @@ else
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         if (!authState.User.IsInRole("Admin"))
         {
+            errorMessage = "У вас нет прав для удаления.";
             return;
         }
 
@@ -254,8 +259,15 @@ else
             return;
         }
 
-        await SchoolClassService.DeleteAsync(id);
-        schoolClasses = await SchoolClassService.GetAllAsync();
+        try
+        {
+            await SchoolClassService.DeleteAsync(id);
+            schoolClasses = await SchoolClassService.GetAllAsync();
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
     }
 
     private void ToggleDetails(int classId)
@@ -303,6 +315,7 @@ else
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         if (!authState.User.IsInRole("Admin"))
         {
+            errorMessage = "У вас нет прав для удаления.";
             return;
         }
 

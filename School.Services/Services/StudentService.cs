@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Services.Validation;
 
 namespace School.Services.Services;
 
@@ -28,14 +29,14 @@ public class StudentService : IStudentService
 
     public async Task AddAsync(Student student)
     {
-        ValidateStudent(student);
+        EntityValidator.Validate(student);
         await _studentRepository.AddAsync(student);
         _logger.LogInformation("Student added: {FirstName} {LastName} (Id: {Id})", student.FirstName, student.LastName, student.Id);
     }
 
     public async Task<bool> UpdateAsync(Student student)
     {
-        ValidateStudent(student);
+        EntityValidator.Validate(student);
         var updated = await _studentRepository.UpdateAsync(student);
         if (updated)
         {
@@ -58,19 +59,6 @@ public class StudentService : IStudentService
         catch (DbUpdateException)
         {
             throw new ArgumentException("Нельзя удалить ученика, у которого есть оценки.");
-        }
-    }
-
-    private void ValidateStudent(Student student)
-    {
-        if (string.IsNullOrWhiteSpace(student.FirstName) || string.IsNullOrWhiteSpace(student.LastName))
-        {
-            throw new ArgumentException("Имя и фамилия ученика обязательны для заполнения.");
-        }
-
-        if (student.BirthDate > DateTime.Now)
-        {
-            throw new ArgumentException("Дата рождения не может быть в будущем.");
         }
     }
 }

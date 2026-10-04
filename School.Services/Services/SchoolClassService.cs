@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Services.Validation;
 
 namespace School.Services.Services;
 
@@ -28,7 +29,7 @@ public class SchoolClassService : ISchoolClassService
 
     public async Task AddAsync(SchoolClass schoolClass)
     {
-        ValidateSchoolClass(schoolClass);
+        EntityValidator.Validate(schoolClass);
 
         if (await _schoolClassRepository.ExistsByNameAsync(schoolClass.Name))
         {
@@ -41,7 +42,7 @@ public class SchoolClassService : ISchoolClassService
 
     public async Task<bool> UpdateAsync(SchoolClass schoolClass)
     {
-        ValidateSchoolClass(schoolClass);
+        EntityValidator.Validate(schoolClass);
 
         if (await _schoolClassRepository.ExistsByNameAsync(schoolClass.Name, schoolClass.Id))
         {
@@ -88,14 +89,6 @@ public class SchoolClassService : ISchoolClassService
         if (removed)
         {
             _logger.LogInformation("Subject {SubjectId} removed from class {ClassId}", subjectId, classId);
-        }
-    }
-
-    private void ValidateSchoolClass(SchoolClass schoolClass)
-    {
-        if (string.IsNullOrWhiteSpace(schoolClass.Name))
-        {
-            throw new ArgumentException("Название класса обязательно для заполнения.");
         }
     }
 }

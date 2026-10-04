@@ -19,14 +19,16 @@ public class Student : IValidatableObject
     [RegularExpression(@"^\+373\d{8}$", ErrorMessage = "Телефон должен быть в формате +373XXXXXXXX.")]
     public string? Phone { get; set; }
 
+    [Range(1, int.MaxValue, ErrorMessage = "Нужно выбрать класс.")]
     public int SchoolClassId { get; set; }
+
     public SchoolClass SchoolClass { get; set; } = null!;
 
     public ICollection<Grade> Grades { get; set; } = new List<Grade>();
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (BirthDate == default || BirthDate > DateTime.Now)
+        if (BirthDate == default || BirthDate > DateTime.UtcNow)
         {
             yield return new ValidationResult(
                 "Укажите корректную дату рождения (не в будущем).",

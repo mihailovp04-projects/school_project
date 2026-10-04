@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Services.Validation;
 
 namespace School.Services.Services;
 
@@ -32,14 +34,23 @@ public class UserService : IUserService
 
     public async Task AddAsync(User user)
     {
-        ValidateUser(user);
-        await _userRepository.AddAsync(user);
+        EntityValidator.Validate(user);
+
+        try
+        {
+            await _userRepository.AddAsync(user);
+        }
+        catch (DbUpdateException)
+        {
+            throw new ArgumentException("Не удалось завершить регистрацию. Попробуйте другой логин.");
+        }
+
         _logger.LogInformation("User added: {Login} (Role: {Role})", user.Login, user.Role);
     }
 
     public async Task<bool> UpdateAsync(User user)
     {
-        ValidateUser(user);
+        EntityValidator.Validate(user);
         var updated = await _userRepository.UpdateAsync(user);
         if (updated)
         {
@@ -56,18 +67,5 @@ public class UserService : IUserService
             _logger.LogInformation("User deleted: Id {Id}", id);
         }
         return deleted;
-    }
-
-    private void ValidateUser(User user)
-    {
-        if (string.IsNullOrWhiteSpace(user.Login))
-        {
-            throw new ArgumentException("Логин обязателен для заполнения.");
-        }
-
-        if (user.Role != "Admin" && user.Role != "Teacher")
-        {
-            throw new ArgumentException("Роль должна быть либо 'Admin', либо 'Teacher'.");
-        }
     }
 }

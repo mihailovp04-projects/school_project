@@ -23,7 +23,7 @@
     </select>
 
     <label>Фамилия:</label>
-    <input type="text" @bind="filterLastName" @bind:event="oninput" placeholder="Введите фамилию" />
+    <input type="text" @bind="filterLastName" @bind:event="oninput" placeholder="Начните вводить фамилию" />
 </div>
 
 <div class="toolbar">
@@ -130,10 +130,10 @@ else
                                 <div class="table-actions">
                                     <button class="btn-link-action" @onclick="() => ShowEditForm(student)">Изменить</button>
                                     <AuthorizeView Roles="Admin">
-    <Authorized>
-        <button class="btn-link-action danger" @onclick="() => HandleDelete(student.Id)">Удалить</button>
-    </Authorized>
-</AuthorizeView>
+                                        <Authorized>
+                                            <button class="btn-link-action danger" @onclick="() => HandleDelete(student.Id)">Удалить</button>
+                                        </Authorized>
+                                    </AuthorizeView>
                                 </div>
                             </td>
                         </tr>
@@ -214,12 +214,6 @@ else
 
     private async Task HandleSave()
     {
-        if (formModel.SchoolClassId == 0)
-        {
-            errorMessage = "Нужно выбрать класс.";
-            return;
-        }
-
         try
         {
             if (editingId == null)
@@ -240,25 +234,35 @@ else
         {
             errorMessage = ex.Message;
         }
+        catch (Exception)
+        {
+            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
+        }
     }
 
     private async Task HandleDelete(int id)
-{
-    var authState = await AuthProvider.GetAuthenticationStateAsync();
-
-    if (!authState.User.IsInRole("Admin"))
     {
-        errorMessage = "Удалять учеников может только администратор.";
-        return;
-    }
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        if (!authState.User.IsInRole("Admin"))
+        {
+            errorMessage = "У вас нет прав для удаления.";
+            return;
+        }
 
-    var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этого ученика?");
-    if (!confirmed)
-    {
-        return;
-    }
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этого ученика?");
+        if (!confirmed)
+        {
+            return;
+        }
 
-    await StudentService.DeleteAsync(id);
-    students = await StudentService.GetAllAsync();
-}
+        try
+        {
+            await StudentService.DeleteAsync(id);
+            students = await StudentService.GetAllAsync();
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
 }

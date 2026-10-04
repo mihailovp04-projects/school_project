@@ -305,12 +305,6 @@
 
     private async Task HandleSave()
     {
-        if (formModel.SubjectId == 0)
-        {
-            errorMessage = "Нужно выбрать предмет.";
-            return;
-        }
-
         formModel.StudentId = selectedStudentId;
 
         try
@@ -335,6 +329,10 @@
         {
             errorMessage = ex.Message;
         }
+        catch (Exception)
+        {
+            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
+        }
     }
 
     private async Task HandleDelete(int id)
@@ -342,6 +340,7 @@
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         if (!authState.User.IsInRole("Admin"))
         {
+            errorMessage = "У вас нет прав для удаления.";
             return;
         }
 

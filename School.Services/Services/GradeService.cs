@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Services.Validation;
 
 namespace School.Services.Services;
 
@@ -74,15 +75,7 @@ public class GradeService : IGradeService
 
     private async Task ValidateGradeAsync(Grade grade)
     {
-        if (grade.Value < 1 || grade.Value > 10)
-        {
-            throw new ArgumentException("Оценка должна быть в диапазоне от 1 до 10.");
-        }
-
-        if (grade.Date == default || grade.Date > DateTime.Now)
-        {
-            throw new ArgumentException("Дата оценки не может быть в будущем.");
-        }
+        EntityValidator.Validate(grade);
 
         var student = await _studentRepository.GetByIdAsync(grade.StudentId);
         if (student == null)

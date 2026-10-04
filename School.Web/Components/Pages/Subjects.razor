@@ -140,6 +140,10 @@ else
         {
             errorMessage = ex.Message;
         }
+        catch (Exception)
+        {
+            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
+        }
     }
 
     private async Task HandleDelete(int id)
@@ -147,6 +151,7 @@ else
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         if (!authState.User.IsInRole("Admin"))
         {
+            errorMessage = "У вас нет прав для удаления.";
             return;
         }
 
@@ -156,7 +161,14 @@ else
             return;
         }
 
-        await SubjectService.DeleteAsync(id);
-        subjects = await SubjectService.GetAllAsync();
+        try
+        {
+            await SubjectService.DeleteAsync(id);
+            subjects = await SubjectService.GetAllAsync();
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
+        }
     }
 }

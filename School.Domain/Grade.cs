@@ -11,15 +11,19 @@ public class Grade : IValidatableObject
 
     public DateTime Date { get; set; }
 
+    [Range(1, int.MaxValue, ErrorMessage = "Нужно выбрать ученика.")]
     public int StudentId { get; set; }
+
     public Student Student { get; set; } = null!;
 
+    [Range(1, int.MaxValue, ErrorMessage = "Нужно выбрать предмет.")]
     public int SubjectId { get; set; }
+
     public Subject Subject { get; set; } = null!;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Date == default || Date > DateTime.Now)
+        if (Date == default || Date > DateTime.UtcNow)
         {
             yield return new ValidationResult(
                 "Дата оценки не может быть в будущем.",
