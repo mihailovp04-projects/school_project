@@ -1,32 +1,49 @@
-﻿using Moq;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using School.Data.Repositories;
 using School.Domain;
 using School.Services.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace School.Tests;
 
 public class GradeServiceTests
 {
-    private readonly Mock<IGradeRepository> _repositoryMock;
+    private readonly Mock<IGradeRepository> _gradeRepositoryMock;
+    private readonly Mock<IStudentRepository> _studentRepositoryMock;
     private readonly GradeService _service;
 
     public GradeServiceTests()
     {
-        _repositoryMock = new Mock<IGradeRepository>();
-        _service = new GradeService(_repositoryMock.Object, NullLogger<GradeService>.Instance);
+        _gradeRepositoryMock = new Mock<IGradeRepository>();
+        _studentRepositoryMock = new Mock<IStudentRepository>();
+        _service = new GradeService(_gradeRepositoryMock.Object, _studentRepositoryMock.Object, NullLogger<GradeService>.Instance);
+    }
+
+    private Student MakeStudentWithSubject(int subjectId)
+    {
+        var subject = new Subject { Id = subjectId, Name = "Математика" };
+        return new Student
+        {
+            Id = 1,
+            SchoolClass = new SchoolClass
+            {
+                Id = 1,
+                Name = "5-А",
+                Subjects = new List<Subject> { subject }
+            }
+        };
     }
 
     [Fact]
-    public async Task GetAverageGradeAsync_NoGrades_ReturnsZero()
+    public async Task GetAverageGradeAsync_NoGrades_ReturnsNull()
     {
-        _repositoryMock
+        _gradeRepositoryMock
             .Setup(r => r.GetByStudentIdAsync(1))
             .ReturnsAsync(new List<Grade>());
 
         var result = await _service.GetAverageGradeAsync(1);
 
-        Assert.Equal(0, result);
+        Assert.Null(result);
     }
 
     [Fact]
@@ -38,10 +55,12 @@ public class GradeServiceTests
             new Grade { Value = 10 },
             new Grade { Value = 6 }
         };
-        _repositoryMock
+        _gradeRepositoryMock
             .Setup(r => r.GetByStudentIdAsync(1))
             .ReturnsAsync(grades);
+
         var result = await _service.GetAverageGradeAsync(1);
+
         Assert.Equal(8, result);
     }
 
@@ -51,8 +70,9 @@ public class GradeServiceTests
     [InlineData(11)]
     public async Task AddAsync_InvalidValue_ThrowsArgumentException(int value)
     {
+        _studentRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(MakeStudentWithSubject(1));
+        var grade = new Grade { StudentId = 1, SubjectId = 1, Value = value, Date = DateTime.Now };
 
-        var grade = new Grade { Value = value };
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(grade));
     }
 
@@ -62,10 +82,20 @@ public class GradeServiceTests
     [InlineData(10)]
     public async Task AddAsync_ValidValue_CallsRepository(int value)
     {
-        var grade = new Grade { Value = value };
+        _studentRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(MakeStudentWithSubject(1));
+        var grade = new Grade { StudentId = 1, SubjectId = 1, Value = value, Date = DateTime.Now };
 
         await _service.AddAsync(grade);
 
-        _repositoryMock.Verify(r => r.AddAsync(grade), Times.Once);
+        _gradeRepositoryMock.Verify(r => r.AddAsync(grade), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddAsync_SubjectNotAssignedToClass_ThrowsArgumentException()
+    {
+        _studentRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(MakeStudentWithSubject(1));
+        var grade = new Grade { StudentId = 1, SubjectId = 99, Value = 8, Date = DateTime.Now };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(grade));
     }
 }

@@ -5,46 +5,54 @@ namespace School.Data.Repositories;
 
 public class GradeRepository : IGradeRepository
 {
-    private readonly SchoolDbContext _context;
+    private readonly IDbContextFactory<SchoolDbContext> _contextFactory;
 
-    public GradeRepository(SchoolDbContext context)
+    public GradeRepository(IDbContextFactory<SchoolDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<List<Grade>> GetAllAsync()
     {
-        return await _context.Grades
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Grades
             .Include(g => g.Student)
             .Include(g => g.Subject)
+            .AsNoTracking()
             .ToListAsync();
     }
 
     public async Task<Grade?> GetByIdAsync(int id)
     {
-        return await _context.Grades
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Grades
             .Include(g => g.Student)
             .Include(g => g.Subject)
+            .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == id);
     }
 
     public async Task<List<Grade>> GetByStudentIdAsync(int studentId)
     {
-        return await _context.Grades
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Grades
             .Include(g => g.Subject)
             .Where(g => g.StudentId == studentId)
+            .AsNoTracking()
             .ToListAsync();
     }
 
     public async Task AddAsync(Grade grade)
     {
-        _context.Grades.Add(grade);
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Grades.Add(grade);
+        await context.SaveChangesAsync();
     }
 
     public async Task<bool> UpdateAsync(Grade grade)
     {
-        var existing = await _context.Grades.FindAsync(grade.Id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existing = await context.Grades.FindAsync(grade.Id);
         if (existing == null)
         {
             return false;
@@ -55,20 +63,21 @@ public class GradeRepository : IGradeRepository
         existing.SubjectId = grade.SubjectId;
         existing.StudentId = grade.StudentId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var grade = await _context.Grades.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var grade = await context.Grades.FindAsync(id);
         if (grade == null)
         {
             return false;
         }
 
-        _context.Grades.Remove(grade);
-        await _context.SaveChangesAsync();
+        context.Grades.Remove(grade);
+        await context.SaveChangesAsync();
         return true;
     }
 }

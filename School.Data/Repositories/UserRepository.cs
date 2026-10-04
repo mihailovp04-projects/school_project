@@ -5,37 +5,42 @@ namespace School.Data.Repositories;
 
 public class UserRepository : IUserRepository
 {
-    private readonly SchoolDbContext _context;
+    private readonly IDbContextFactory<SchoolDbContext> _contextFactory;
 
-    public UserRepository(SchoolDbContext context)
+    public UserRepository(IDbContextFactory<SchoolDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<List<User>> GetAllAsync()
     {
-        return await _context.Users.ToListAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Users.AsNoTracking().ToListAsync();
     }
 
     public async Task<User?> GetByIdAsync(int id)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<User?> GetByLoginAsync(string login)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Login == login);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Login == login);
     }
 
     public async Task AddAsync(User user)
     {
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
     }
 
     public async Task<bool> UpdateAsync(User user)
     {
-        var existing = await _context.Users.FindAsync(user.Id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existing = await context.Users.FindAsync(user.Id);
         if (existing == null)
         {
             return false;
@@ -45,20 +50,21 @@ public class UserRepository : IUserRepository
         existing.PasswordHash = user.PasswordHash;
         existing.Role = user.Role;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var user = await _context.Users.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var user = await context.Users.FindAsync(id);
         if (user == null)
         {
             return false;
         }
 
-        _context.Users.Remove(user);
-        await _context.SaveChangesAsync();
+        context.Users.Remove(user);
+        await context.SaveChangesAsync();
         return true;
     }
 }

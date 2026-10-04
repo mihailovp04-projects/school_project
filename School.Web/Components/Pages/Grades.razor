@@ -2,7 +2,6 @@
 @attribute [Authorize]
 @inject IGradeService GradeService
 @inject IStudentService StudentService
-@inject ISubjectService SubjectService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthProvider
 
@@ -24,7 +23,7 @@
     </select>
 </div>
 
-@if (selectedStudentId != 0)
+@if (selectedStudentId != 0 && selectedStudent != null)
 {
     @if (overallAverage.HasValue)
     {
@@ -58,7 +57,14 @@
     <div class="toolbar">
         @if (!showForm)
         {
-            <button class="btn-primary" @onclick="ShowAddForm">Добавить оценку</button>
+            @if (selectedStudent.SchoolClass.Subjects.Count > 0)
+            {
+                <button class="btn-primary" @onclick="ShowAddForm">Добавить оценку</button>
+            }
+            else
+            {
+                <p class="muted">К классу ученика ещё не привязан ни один предмет.</p>
+            }
         }
     </div>
 
@@ -76,12 +82,9 @@
                         <label>Предмет</label>
                         <select @bind="formModel.SubjectId">
                             <option value="0">-- выберите предмет --</option>
-                            @if (subjects != null)
+                            @foreach (var subject in selectedStudent.SchoolClass.Subjects)
                             {
-                                @foreach (var subject in subjects)
-                                {
-                                    <option value="@subject.Id">@subject.Name</option>
-                                }
+                                <option value="@subject.Id">@subject.Name</option>
                             }
                         </select>
                     </div>
@@ -179,7 +182,7 @@
 
 @code {
     private List<Student>? students;
-    private List<Subject>? subjects;
+    private Student? selectedStudent;
     private List<Grade>? studentGrades;
     private List<SubjectAverage>? subjectAverages;
     private double? overallAverage;
@@ -200,7 +203,6 @@
     protected override async Task OnInitializedAsync()
     {
         students = await StudentService.GetAllAsync();
-        subjects = await SubjectService.GetAllAsync();
     }
 
     private async Task LoadStudentGrades()
@@ -212,12 +214,14 @@
 
         if (selectedStudentId == 0)
         {
+            selectedStudent = null;
             studentGrades = null;
             subjectAverages = null;
             overallAverage = null;
             return;
         }
 
+        selectedStudent = await StudentService.GetByIdAsync(selectedStudentId);
         studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
         overallAverage = await GradeService.GetAverageGradeAsync(selectedStudentId);
         CalculateSubjectAverages();

@@ -5,36 +5,43 @@ namespace School.Data.Repositories;
 
 public class StudentRepository : IStudentRepository
 {
-    private readonly SchoolDbContext _context;
+    private readonly IDbContextFactory<SchoolDbContext> _contextFactory;
 
-    public StudentRepository(SchoolDbContext context)
+    public StudentRepository(IDbContextFactory<SchoolDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<List<Student>> GetAllAsync()
     {
-        return await _context.Students
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Students
             .Include(s => s.SchoolClass)
+            .AsNoTracking()
             .ToListAsync();
     }
 
     public async Task<Student?> GetByIdAsync(int id)
     {
-        return await _context.Students
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Students
             .Include(s => s.SchoolClass)
+                .ThenInclude(c => c.Subjects)
+            .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
     public async Task AddAsync(Student student)
     {
-        _context.Students.Add(student);
-        await _context.SaveChangesAsync();
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        context.Students.Add(student);
+        await context.SaveChangesAsync();
     }
 
     public async Task<bool> UpdateAsync(Student student)
     {
-        var existing = await _context.Students.FindAsync(student.Id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existing = await context.Students.FindAsync(student.Id);
         if (existing == null)
         {
             return false;
@@ -46,20 +53,21 @@ public class StudentRepository : IStudentRepository
         existing.Phone = student.Phone;
         existing.SchoolClassId = student.SchoolClassId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var student = await _context.Students.FindAsync(id);
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var student = await context.Students.FindAsync(id);
         if (student == null)
         {
             return false;
         }
 
-        _context.Students.Remove(student);
-        await _context.SaveChangesAsync();
+        context.Students.Remove(student);
+        await context.SaveChangesAsync();
         return true;
     }
 }

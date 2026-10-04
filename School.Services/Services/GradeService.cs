@@ -7,11 +7,13 @@ namespace School.Services.Services;
 public class GradeService : IGradeService
 {
     private readonly IGradeRepository _gradeRepository;
+    private readonly IStudentRepository _studentRepository;
     private readonly ILogger<GradeService> _logger;
 
-    public GradeService(IGradeRepository gradeRepository, ILogger<GradeService> logger)
+    public GradeService(IGradeRepository gradeRepository, IStudentRepository studentRepository, ILogger<GradeService> logger)
     {
         _gradeRepository = gradeRepository;
+        _studentRepository = studentRepository;
         _logger = logger;
     }
 
@@ -44,14 +46,14 @@ public class GradeService : IGradeService
 
     public async Task AddAsync(Grade grade)
     {
-        ValidateGrade(grade);
+        await ValidateGradeAsync(grade);
         await _gradeRepository.AddAsync(grade);
         _logger.LogInformation("Grade added: StudentId {StudentId}, SubjectId {SubjectId}, Value {Value}", grade.StudentId, grade.SubjectId, grade.Value);
     }
 
     public async Task<bool> UpdateAsync(Grade grade)
     {
-        ValidateGrade(grade);
+        await ValidateGradeAsync(grade);
         var updated = await _gradeRepository.UpdateAsync(grade);
         if (updated)
         {
@@ -70,16 +72,27 @@ public class GradeService : IGradeService
         return deleted;
     }
 
-    private void ValidateGrade(Grade grade)
+    private async Task ValidateGradeAsync(Grade grade)
     {
         if (grade.Value < 1 || grade.Value > 10)
         {
             throw new ArgumentException("Оценка должна быть в диапазоне от 1 до 10.");
         }
 
-        if (grade.Date > DateTime.Now)
+        if (grade.Date == default || grade.Date > DateTime.Now)
         {
             throw new ArgumentException("Дата оценки не может быть в будущем.");
+        }
+
+        var student = await _studentRepository.GetByIdAsync(grade.StudentId);
+        if (student == null)
+        {
+            throw new ArgumentException("Ученик не найден.");
+        }
+
+        if (!student.SchoolClass.Subjects.Any(s => s.Id == grade.SubjectId))
+        {
+            throw new ArgumentException("Этот предмет не привязан к классу ученика.");
         }
     }
 }

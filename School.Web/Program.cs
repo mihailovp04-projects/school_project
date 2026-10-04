@@ -13,7 +13,7 @@ using School.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<SchoolDbContext>(options =>
+builder.Services.AddDbContextFactory<SchoolDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SchoolDb")));
 
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
