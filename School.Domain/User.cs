@@ -12,6 +12,7 @@ public class User
 
     public string PasswordHash { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Роль обязательна для заполнения.")]
     [RegularExpression("^(Admin|Teacher)$", ErrorMessage = "Роль должна быть либо 'Admin', либо 'Teacher'.")]
     public string Role { get; set; } = string.Empty;
 }

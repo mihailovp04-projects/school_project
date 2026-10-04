@@ -1,8 +1,8 @@
-﻿using Moq;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using School.Data.Repositories;
 using School.Domain;
 using School.Services.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace School.Tests;
 

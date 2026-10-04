@@ -71,7 +71,7 @@ public class GradeServiceTests
     public async Task AddAsync_InvalidValue_ThrowsArgumentException(int value)
     {
         _studentRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(MakeStudentWithSubject(1));
-        var grade = new Grade { StudentId = 1, SubjectId = 1, Value = value, Date = DateTime.Now };
+        var grade = new Grade { StudentId = 1, SubjectId = 1, Value = value, Date = DateTime.UtcNow };
 
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(grade));
     }
@@ -83,7 +83,7 @@ public class GradeServiceTests
     public async Task AddAsync_ValidValue_CallsRepository(int value)
     {
         _studentRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(MakeStudentWithSubject(1));
-        var grade = new Grade { StudentId = 1, SubjectId = 1, Value = value, Date = DateTime.Now };
+        var grade = new Grade { StudentId = 1, SubjectId = 1, Value = value, Date = DateTime.UtcNow };
 
         await _service.AddAsync(grade);
 
@@ -91,10 +91,10 @@ public class GradeServiceTests
     }
 
     [Fact]
-    public async Task AddAsync_SubjectNotAssignedToClass_ThrowsArgumentException()
+    public async Task AddAsync_SubjectNotAssigned_ThrowsArgumentException()
     {
         _studentRepositoryMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(MakeStudentWithSubject(1));
-        var grade = new Grade { StudentId = 1, SubjectId = 99, Value = 8, Date = DateTime.Now };
+        var grade = new Grade { StudentId = 1, SubjectId = 99, Value = 8, Date = DateTime.UtcNow };
 
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(grade));
     }

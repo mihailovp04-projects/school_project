@@ -1,8 +1,8 @@
-﻿using Moq;
+﻿using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using School.Data.Repositories;
 using School.Domain;
 using School.Services.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace School.Tests;
 
@@ -20,7 +20,7 @@ public class StudentServiceTests
     [Fact]
     public async Task AddAsync_EmptyFirstName_ThrowsArgumentException()
     {
-        var student = new Student { FirstName = "", LastName = "Ivanov", BirthDate = new DateTime(2010, 1, 1) };
+        var student = new Student { FirstName = "", LastName = "Ivanov", BirthDate = new DateTime(2010, 1, 1), SchoolClassId = 1 };
 
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(student));
     }
@@ -28,7 +28,7 @@ public class StudentServiceTests
     [Fact]
     public async Task AddAsync_EmptyLastName_ThrowsArgumentException()
     {
-        var student = new Student { FirstName = "Ivan", LastName = "   ", BirthDate = new DateTime(2010, 1, 1) };
+        var student = new Student { FirstName = "Ivan", LastName = "   ", BirthDate = new DateTime(2010, 1, 1), SchoolClassId = 1 };
 
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(student));
     }
@@ -40,7 +40,22 @@ public class StudentServiceTests
         {
             FirstName = "Ivan",
             LastName = "Ivanov",
-            BirthDate = DateTime.Now.AddYears(1)
+            BirthDate = DateTime.UtcNow.AddYears(1),
+            SchoolClassId = 1
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(student));
+    }
+
+    [Fact]
+    public async Task AddAsync_NoClassSelected_ThrowsArgumentException()
+    {
+        var student = new Student
+        {
+            FirstName = "Ivan",
+            LastName = "Ivanov",
+            BirthDate = new DateTime(2010, 1, 1),
+            SchoolClassId = 0
         };
 
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(student));
@@ -53,7 +68,8 @@ public class StudentServiceTests
         {
             FirstName = "Ivan",
             LastName = "Ivanov",
-            BirthDate = new DateTime(2010, 1, 1)
+            BirthDate = new DateTime(2010, 1, 1),
+            SchoolClassId = 1
         };
 
         await _service.AddAsync(student);
