@@ -7,7 +7,7 @@ public class SchoolClass
     public int Id { get; set; }
 
     [Required(ErrorMessage = "Название класса обязательно для заполнения.")]
-    [RegularExpression(@"^\d{1,2}-[А-Яа-яA-Za-z]$", ErrorMessage = "Название класса должно быть в формате 9-А или 11-Б.")]
+    [RegularExpression(@"^(?:[1-9]|1[01])-[А-ЯЁA-Z]$", ErrorMessage = "Название класса должно быть в формате 9-А или 11-Б.")]
     public string Name { get; set; } = string.Empty;
 
     public ICollection<Student> Students { get; set; } = new List<Student>();

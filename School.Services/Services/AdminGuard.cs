@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 
-namespace School.Web.Services;
+namespace School.Services.Services;
 
 public class AdminGuard
 {

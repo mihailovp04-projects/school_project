@@ -10,7 +10,7 @@ using School.Domain;
 using School.Services.Security;
 using School.Services.Services;
 using School.Web.Components;
-using School.Web.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 

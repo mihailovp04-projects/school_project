@@ -303,6 +303,8 @@ table thead {
 
 .form-actions {
     grid-column: 2;
+    display: flex;
+    gap: 0.75rem;
 }
 
 .form-error {

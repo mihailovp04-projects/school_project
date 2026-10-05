@@ -34,5 +34,11 @@ public class Student : IValidatableObject
                 "Укажите корректную дату рождения (не в будущем).",
                 new[] { nameof(BirthDate) });
         }
+        else if (BirthDate < DateTime.UtcNow.AddYears(-100))
+        {
+            yield return new ValidationResult(
+                "Дата рождения выглядит некорректной.",
+                new[] { nameof(BirthDate) });
+        }
     }
 }
