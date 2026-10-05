@@ -10,6 +10,7 @@ using School.Domain;
 using School.Services.Security;
 using School.Services.Services;
 using School.Web.Components;
+using School.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,8 @@ builder.Services.AddScoped<ISchoolClassService, SchoolClassService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IGradeService, GradeService>();
 builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddScoped<AdminGuard>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

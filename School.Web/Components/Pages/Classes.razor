@@ -2,8 +2,7 @@
 @attribute [Authorize]
 @inject ISchoolClassService SchoolClassService
 @inject ISubjectService SubjectService
-@inject IJSRuntime JS
-@inject AuthenticationStateProvider AuthProvider
+@inject AdminGuard AdminGuard
 
 <div class="page-header">
     <h1>Классы</h1>
@@ -246,15 +245,13 @@ else
 
     private async Task HandleDelete(int id)
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        if (!authState.User.IsInRole("Admin"))
+        var result = await AdminGuard.ConfirmAdminActionAsync("Удалить этот класс?");
+        if (result == null)
         {
             errorMessage = "У вас нет прав для удаления.";
             return;
         }
-
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этот класс?");
-        if (!confirmed)
+        if (result != true)
         {
             return;
         }
@@ -312,14 +309,13 @@ else
 
     private async Task HandleRemoveSubject(int subjectId)
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        if (!authState.User.IsInRole("Admin"))
+        var result = await AdminGuard.ConfirmAdminActionAsync("Отвязать этот предмет?");
+        if (result == null)
         {
             errorMessage = "У вас нет прав для удаления.";
             return;
         }
-
-        if (assigningClass == null)
+        if (result != true || assigningClass == null)
         {
             return;
         }

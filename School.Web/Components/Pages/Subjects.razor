@@ -1,8 +1,7 @@
 ﻿@page "/subjects"
 @attribute [Authorize]
 @inject ISubjectService SubjectService
-@inject IJSRuntime JS
-@inject AuthenticationStateProvider AuthProvider
+@inject AdminGuard AdminGuard
 
 <div class="page-header">
     <h1>Предметы</h1>
@@ -148,15 +147,13 @@ else
 
     private async Task HandleDelete(int id)
     {
-        var authState = await AuthProvider.GetAuthenticationStateAsync();
-        if (!authState.User.IsInRole("Admin"))
+        var result = await AdminGuard.ConfirmAdminActionAsync("Удалить этот предмет?");
+        if (result == null)
         {
             errorMessage = "У вас нет прав для удаления.";
             return;
         }
-
-        var confirmed = await JS.InvokeAsync<bool>("confirm", "Удалить этот предмет?");
-        if (!confirmed)
+        if (result != true)
         {
             return;
         }
