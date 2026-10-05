@@ -1,0 +1,52 @@
+﻿@typeparam TItem
+
+<div class="card">
+    <p class="section-title">@Title</p>
+
+    <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="@FormName">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form">
+            @ChildContent
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Сохранить</button>
+                <button type="button" class="btn-secondary" @onclick="OnCancel">Отменить</button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <p class="form-error">@ErrorMessage</p>
+        }
+    </EditForm>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public TItem Model { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter, EditorRequired]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter, EditorRequired]
+    public string FormName { get; set; } = string.Empty;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private Task HandleValidSubmit()
+    {
+        return OnSave.InvokeAsync();
+    }
+}

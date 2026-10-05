@@ -16,31 +16,18 @@
 
 @if (showForm)
 {
-    <div class="card">
-        <p class="section-title">@(editingId == null ? "Новый предмет" : "Редактирование предмета")</p>
-
-        <EditForm Model="formModel" OnValidSubmit="HandleSave" FormName="SubjectForm">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
-
-            <div class="form">
-                <div class="form-group">
-                    <label>Название предмета</label>
-                    <InputText @bind-Value="formModel.Name" placeholder="Например, Математика" />
-                </div>
-
-                <div class="form-actions" style="display: flex; gap: 0.75rem;">
-                    <button type="submit" class="btn-primary">Сохранить</button>
-                    <button type="button" class="btn-secondary" @onclick="CancelForm">Отменить</button>
-                </div>
-            </div>
-
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <p class="form-error">@errorMessage</p>
-            }
-        </EditForm>
-    </div>
+    <EntityFormCard TItem="Subject"
+                     Title="@(editingId == null ? "Новый предмет" : "Редактирование предмета")"
+                     Model="formModel"
+                     OnSave="HandleSave"
+                     OnCancel="CancelForm"
+                     ErrorMessage="@errorMessage"
+                     FormName="SubjectForm">
+        <div class="form-group">
+            <label>Название предмета</label>
+            <InputText @bind-Value="formModel.Name" placeholder="Например, Математика" />
+        </div>
+    </EntityFormCard>
 }
 
 @if (subjects == null)
