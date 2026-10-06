@@ -19,14 +19,25 @@ public static class PasswordHasher
     public static bool Verify(string password, string hash)
     {
         var parts = hash.Split('.', 3);
-        if (parts.Length != 3 || !int.TryParse(parts[0], out var iterations))
+        if (parts.Length != 3 || !int.TryParse(parts[0], out var iterations) || iterations <= 0)
         {
             return false;
         }
 
-        var salt = Convert.FromBase64String(parts[1]);
-        var expected = Convert.FromBase64String(parts[2]);
-        var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, Algorithm, expected.Length);
-        return CryptographicOperations.FixedTimeEquals(actual, expected);
+        try
+        {
+            var salt = Convert.FromBase64String(parts[1]);
+            var expected = Convert.FromBase64String(parts[2]);
+            var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, Algorithm, expected.Length);
+            return CryptographicOperations.FixedTimeEquals(actual, expected);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 }

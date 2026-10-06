@@ -22,11 +22,6 @@ public class UserService : IUserService
         return await _userRepository.GetAllAsync();
     }
 
-    public async Task<User?> GetByIdAsync(int id)
-    {
-        return await _userRepository.GetByIdAsync(id);
-    }
-
     public async Task<User?> GetByLoginAsync(string login)
     {
         return await _userRepository.GetByLoginAsync(login);
@@ -46,26 +41,5 @@ public class UserService : IUserService
         }
 
         _logger.LogInformation("User added: {Login} (Role: {Role})", user.Login, user.Role);
-    }
-
-    public async Task<bool> UpdateAsync(User user)
-    {
-        EntityValidator.Validate(user);
-        var updated = await _userRepository.UpdateAsync(user);
-        if (updated)
-        {
-            _logger.LogInformation("User updated: Id {Id}", user.Id);
-        }
-        return updated;
-    }
-
-    public async Task<bool> DeleteAsync(int id)
-    {
-        var deleted = await _userRepository.DeleteAsync(id);
-        if (deleted)
-        {
-            _logger.LogInformation("User deleted: Id {Id}", id);
-        }
-        return deleted;
     }
 }

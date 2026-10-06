@@ -12,26 +12,6 @@ public class GradeRepository : IGradeRepository
         _contextFactory = contextFactory;
     }
 
-    public async Task<List<Grade>> GetAllAsync()
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.Grades
-            .Include(g => g.Student)
-            .Include(g => g.Subject)
-            .AsNoTracking()
-            .ToListAsync();
-    }
-
-    public async Task<Grade?> GetByIdAsync(int id)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.Grades
-            .Include(g => g.Student)
-            .Include(g => g.Subject)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(g => g.Id == id);
-    }
-
     public async Task<List<Grade>> GetByStudentIdAsync(int studentId)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

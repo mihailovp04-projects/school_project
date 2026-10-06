@@ -23,7 +23,7 @@ public class Grade : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (Date == default || Date > DateTime.UtcNow)
+        if (Date == default || Date.Date > DateTime.UtcNow.Date.AddDays(1))
         {
             yield return new ValidationResult(
                 "Дата оценки не может быть в будущем.",

@@ -18,16 +18,6 @@ public class GradeService : IGradeService
         _logger = logger;
     }
 
-    public async Task<List<Grade>> GetAllAsync()
-    {
-        return await _gradeRepository.GetAllAsync();
-    }
-
-    public async Task<Grade?> GetByIdAsync(int id)
-    {
-        return await _gradeRepository.GetByIdAsync(id);
-    }
-
     public async Task<List<Grade>> GetByStudentIdAsync(int studentId)
     {
         return await _gradeRepository.GetByStudentIdAsync(studentId);

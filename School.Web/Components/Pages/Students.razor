@@ -10,7 +10,7 @@
 
 <div class="selector-row">
     <label>Класс:</label>
-    <select @bind="filterClassId">
+    <select @bind="filterClassId" @bind:after="ApplyFilter">
         <option value="0">Все классы</option>
         @if (schoolClasses != null)
         {
@@ -22,7 +22,7 @@
     </select>
 
     <label>Фамилия:</label>
-    <input type="text" @bind="filterLastName" @bind:event="oninput" placeholder="Начните вводить фамилию" />
+    <input type="text" @bind="filterLastName" @bind:event="oninput" @bind:after="ApplyFilter" placeholder="Начните вводить фамилию" />
 </div>
 
 <div class="toolbar">
@@ -31,6 +31,11 @@
         <button class="btn-primary" @onclick="ShowAddForm">Добавить ученика</button>
     }
 </div>
+
+@if (!string.IsNullOrEmpty(pageMessage))
+{
+    <p class="form-error">@pageMessage</p>
+}
 
 @if (showForm)
 {
@@ -83,8 +88,6 @@
 }
 else
 {
-    var filteredStudents = GetFilteredStudents();
-
     if (filteredStudents.Count == 0)
     {
         <div class="empty-state">Ничего не найдено.</div>
@@ -131,7 +134,10 @@ else
 }
 
 @code {
+    private const string NotFoundMessage = "Запись не найдена: возможно, её уже удалил другой пользователь. Список обновлён.";
+
     private List<Student>? students;
+    private List<Student> filteredStudents = new();
     private List<SchoolClass>? schoolClasses;
     private Student formModel = new();
     private int? editingId;
@@ -139,18 +145,26 @@ else
     private string filterLastName = string.Empty;
     private bool showForm = false;
     private string? errorMessage;
+    private string? pageMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        students = await StudentService.GetAllAsync();
         schoolClasses = await SchoolClassService.GetAllAsync();
+        await ReloadStudentsAsync();
     }
 
-    private List<Student> GetFilteredStudents()
+    private async Task ReloadStudentsAsync()
+    {
+        students = await StudentService.GetAllAsync();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
     {
         if (students == null)
         {
-            return new List<Student>();
+            filteredStudents = new List<Student>();
+            return;
         }
 
         var result = students.AsEnumerable();
@@ -165,7 +179,7 @@ else
             result = result.Where(s => s.LastName.Contains(filterLastName, StringComparison.OrdinalIgnoreCase));
         }
 
-        return result.ToList();
+        filteredStudents = result.ToList();
     }
 
     private void ShowAddForm()
@@ -174,6 +188,7 @@ else
         editingId = null;
         showForm = true;
         errorMessage = null;
+        pageMessage = null;
     }
 
     private void ShowEditForm(Student student)
@@ -190,6 +205,7 @@ else
         editingId = student.Id;
         showForm = true;
         errorMessage = null;
+        pageMessage = null;
     }
 
     private void CancelForm()
@@ -202,6 +218,8 @@ else
     {
         try
         {
+            var saved = true;
+
             if (editingId == null)
             {
                 await StudentService.AddAsync(formModel);
@@ -209,12 +227,13 @@ else
             else
             {
                 formModel.Id = editingId.Value;
-                await StudentService.UpdateAsync(formModel);
+                saved = await StudentService.UpdateAsync(formModel);
             }
 
-            students = await StudentService.GetAllAsync();
+            await ReloadStudentsAsync();
             showForm = false;
             errorMessage = null;
+            pageMessage = saved ? null : NotFoundMessage;
         }
         catch (ArgumentException ex)
         {
@@ -228,10 +247,12 @@ else
 
     private async Task HandleDelete(int id)
     {
+        pageMessage = null;
+
         var result = await AdminGuard.ConfirmAdminActionAsync("Удалить этого ученика?");
         if (result == null)
         {
-            errorMessage = "У вас нет прав для удаления.";
+            pageMessage = "У вас нет прав для удаления.";
             return;
         }
         if (result != true)
@@ -241,12 +262,20 @@ else
 
         try
         {
-            await StudentService.DeleteAsync(id);
-            students = await StudentService.GetAllAsync();
+            var deleted = await StudentService.DeleteAsync(id);
+            await ReloadStudentsAsync();
+            if (!deleted)
+            {
+                pageMessage = NotFoundMessage;
+            }
         }
         catch (ArgumentException ex)
         {
-            errorMessage = ex.Message;
+            pageMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
         }
     }
 }

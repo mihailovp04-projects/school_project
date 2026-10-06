@@ -15,6 +15,11 @@
     }
 </div>
 
+@if (!string.IsNullOrEmpty(pageMessage))
+{
+    <p class="form-error">@pageMessage</p>
+}
+
 @if (showForm)
 {
     <EntityFormCard TItem="SchoolClass"
@@ -164,6 +169,8 @@ else
 }
 
 @code {
+    private const string NotFoundMessage = "Запись не найдена: возможно, её уже удалил другой пользователь. Список обновлён.";
+
     private List<SchoolClass>? schoolClasses;
     private List<Subject>? subjects;
     private SchoolClass formModel = new();
@@ -173,11 +180,23 @@ else
     private int selectedSubjectId;
     private bool showForm = false;
     private string? errorMessage;
+    private string? pageMessage;
 
     protected override async Task OnInitializedAsync()
     {
         schoolClasses = await SchoolClassService.GetAllAsync();
         subjects = await SubjectService.GetAllAsync();
+    }
+
+    private async Task ReloadClassesAsync()
+    {
+        schoolClasses = await SchoolClassService.GetAllAsync();
+
+        if (assigningClass != null)
+        {
+            var current = assigningClass.Id;
+            assigningClass = schoolClasses.FirstOrDefault(c => c.Id == current);
+        }
     }
 
     private void ShowAddForm()
@@ -186,6 +205,7 @@ else
         editingId = null;
         showForm = true;
         errorMessage = null;
+        pageMessage = null;
     }
 
     private void ShowEditForm(SchoolClass schoolClass)
@@ -194,6 +214,7 @@ else
         editingId = schoolClass.Id;
         showForm = true;
         errorMessage = null;
+        pageMessage = null;
     }
 
     private void CancelForm()
@@ -206,6 +227,8 @@ else
     {
         try
         {
+            var saved = true;
+
             if (editingId == null)
             {
                 await SchoolClassService.AddAsync(formModel);
@@ -213,12 +236,13 @@ else
             else
             {
                 formModel.Id = editingId.Value;
-                await SchoolClassService.UpdateAsync(formModel);
+                saved = await SchoolClassService.UpdateAsync(formModel);
             }
 
-            schoolClasses = await SchoolClassService.GetAllAsync();
+            await ReloadClassesAsync();
             showForm = false;
             errorMessage = null;
+            pageMessage = saved ? null : NotFoundMessage;
         }
         catch (ArgumentException ex)
         {
@@ -232,10 +256,12 @@ else
 
     private async Task HandleDelete(int id)
     {
+        pageMessage = null;
+
         var result = await AdminGuard.ConfirmAdminActionAsync("Удалить этот класс?");
         if (result == null)
         {
-            errorMessage = "У вас нет прав для удаления.";
+            pageMessage = "У вас нет прав для удаления.";
             return;
         }
         if (result != true)
@@ -245,12 +271,20 @@ else
 
         try
         {
-            await SchoolClassService.DeleteAsync(id);
-            schoolClasses = await SchoolClassService.GetAllAsync();
+            var deleted = await SchoolClassService.DeleteAsync(id);
+            await ReloadClassesAsync();
+            if (!deleted)
+            {
+                pageMessage = NotFoundMessage;
+            }
         }
         catch (ArgumentException ex)
         {
-            errorMessage = ex.Message;
+            pageMessage = ex.Message;
+        }
+        catch (Exception)
+        {
+            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
         }
     }
 
@@ -288,18 +322,32 @@ else
             return;
         }
 
-        await SchoolClassService.AssignSubjectAsync(assigningClass.Id, selectedSubjectId);
-        schoolClasses = await SchoolClassService.GetAllAsync();
-        assigningClass = schoolClasses.FirstOrDefault(c => c.Id == assigningClass.Id);
-        selectedSubjectId = 0;
+        pageMessage = null;
+
+        try
+        {
+            var assigned = await SchoolClassService.AssignSubjectAsync(assigningClass.Id, selectedSubjectId);
+            await ReloadClassesAsync();
+            selectedSubjectId = 0;
+            if (!assigned)
+            {
+                pageMessage = NotFoundMessage;
+            }
+        }
+        catch (Exception)
+        {
+            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
+        }
     }
 
     private async Task HandleRemoveSubject(int subjectId)
     {
+        pageMessage = null;
+
         var result = await AdminGuard.ConfirmAdminActionAsync("Отвязать этот предмет?");
         if (result == null)
         {
-            errorMessage = "У вас нет прав для удаления.";
+            pageMessage = "У вас нет прав для удаления.";
             return;
         }
         if (result != true || assigningClass == null)
@@ -307,8 +355,18 @@ else
             return;
         }
 
-        await SchoolClassService.RemoveSubjectAsync(assigningClass.Id, subjectId);
-        schoolClasses = await SchoolClassService.GetAllAsync();
-        assigningClass = schoolClasses.FirstOrDefault(c => c.Id == assigningClass.Id);
+        try
+        {
+            var removed = await SchoolClassService.RemoveSubjectAsync(assigningClass.Id, subjectId);
+            await ReloadClassesAsync();
+            if (!removed)
+            {
+                pageMessage = NotFoundMessage;
+            }
+        }
+        catch (Exception)
+        {
+            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
+        }
     }
 }

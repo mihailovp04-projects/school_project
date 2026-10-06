@@ -67,6 +67,11 @@
         }
     </div>
 
+    @if (!string.IsNullOrEmpty(pageMessage))
+    {
+        <p class="form-error">@pageMessage</p>
+    }
+
     @if (showForm)
     {
         <EntityFormCard TItem="Grade"
@@ -103,9 +108,9 @@
 
     <div class="selector-row">
         <label>С:</label>
-        <input type="date" @bind="filterFrom" />
+        <input type="date" @bind="filterFrom" @bind:after="ApplyPeriodFilter" />
         <label>По:</label>
-        <input type="date" @bind="filterTo" />
+        <input type="date" @bind="filterTo" @bind:after="ApplyPeriodFilter" />
         @if (filterFrom != null || filterTo != null)
         {
             <button class="btn-link-action" @onclick="ClearPeriodFilter">Сбросить период</button>
@@ -122,8 +127,6 @@
     }
     else
     {
-        var filteredGrades = GetFilteredGrades();
-
         if (filteredGrades.Count == 0)
         {
             <div class="empty-state">Нет оценок за выбранный период.</div>
@@ -167,16 +170,20 @@
 }
 
 @code {
+    private const string NotFoundMessage = "Запись не найдена: возможно, её уже удалил другой пользователь. Список обновлён.";
+
     private List<Student>? students;
     private Student? selectedStudent;
     private List<Grade>? studentGrades;
+    private List<Grade> filteredGrades = new();
     private List<SubjectAverage>? subjectAverages;
     private double? overallAverage;
-    private Grade formModel = new() { Date = DateTime.Now };
+    private Grade formModel = new() { Date = DateTime.Today };
     private int? editingId;
     private int selectedStudentId = 0;
     private bool showForm = false;
     private string? errorMessage;
+    private string? pageMessage;
     private DateTime? filterFrom;
     private DateTime? filterTo;
 
@@ -195,6 +202,7 @@
     {
         showForm = false;
         errorMessage = null;
+        pageMessage = null;
         filterFrom = null;
         filterTo = null;
 
@@ -204,20 +212,28 @@
             studentGrades = null;
             subjectAverages = null;
             overallAverage = null;
+            filteredGrades = new List<Grade>();
             return;
         }
 
         selectedStudent = await StudentService.GetByIdAsync(selectedStudentId);
+        await ReloadGradesAsync();
+    }
+
+    private async Task ReloadGradesAsync()
+    {
         studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
         overallAverage = await GradeService.GetAverageGradeAsync(selectedStudentId);
         CalculateSubjectAverages();
+        ApplyPeriodFilter();
     }
 
-    private List<Grade> GetFilteredGrades()
+    private void ApplyPeriodFilter()
     {
         if (studentGrades == null)
         {
-            return new List<Grade>();
+            filteredGrades = new List<Grade>();
+            return;
         }
 
         var result = studentGrades.AsEnumerable();
@@ -232,13 +248,14 @@
             result = result.Where(g => g.Date.Date <= filterTo.Value.Date);
         }
 
-        return result.OrderByDescending(g => g.Date).ToList();
+        filteredGrades = result.OrderByDescending(g => g.Date).ToList();
     }
 
     private void ClearPeriodFilter()
     {
         filterFrom = null;
         filterTo = null;
+        ApplyPeriodFilter();
     }
 
     private void CalculateSubjectAverages()
@@ -262,10 +279,11 @@
 
     private void ShowAddForm()
     {
-        formModel = new() { Date = DateTime.Now };
+        formModel = new() { Date = DateTime.Today, StudentId = selectedStudentId };
         editingId = null;
         showForm = true;
         errorMessage = null;
+        pageMessage = null;
     }
 
     private void ShowEditForm(Grade grade)
@@ -281,6 +299,7 @@
         editingId = grade.Id;
         showForm = true;
         errorMessage = null;
+        pageMessage = null;
     }
 
     private void CancelForm()
@@ -295,6 +314,8 @@
 
         try
         {
+            var saved = true;
+
             if (editingId == null)
             {
                 await GradeService.AddAsync(formModel);
@@ -302,14 +323,13 @@
             else
             {
                 formModel.Id = editingId.Value;
-                await GradeService.UpdateAsync(formModel);
+                saved = await GradeService.UpdateAsync(formModel);
             }
 
-            studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
-            overallAverage = await GradeService.GetAverageGradeAsync(selectedStudentId);
-            CalculateSubjectAverages();
+            await ReloadGradesAsync();
             showForm = false;
             errorMessage = null;
+            pageMessage = saved ? null : NotFoundMessage;
         }
         catch (ArgumentException ex)
         {
@@ -323,10 +343,12 @@
 
     private async Task HandleDelete(int id)
     {
+        pageMessage = null;
+
         var result = await AdminGuard.ConfirmAdminActionAsync("Удалить эту оценку?");
         if (result == null)
         {
-            errorMessage = "У вас нет прав для удаления.";
+            pageMessage = "У вас нет прав для удаления.";
             return;
         }
         if (result != true)
@@ -334,10 +356,19 @@
             return;
         }
 
-        await GradeService.DeleteAsync(id);
-        studentGrades = await GradeService.GetByStudentIdAsync(selectedStudentId);
-        overallAverage = await GradeService.GetAverageGradeAsync(selectedStudentId);
-        CalculateSubjectAverages();
+        try
+        {
+            var deleted = await GradeService.DeleteAsync(id);
+            await ReloadGradesAsync();
+            if (!deleted)
+            {
+                pageMessage = NotFoundMessage;
+            }
+        }
+        catch (Exception)
+        {
+            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
+        }
     }
 
     private RenderFragment GetGradeBadge(int value) => builder =>

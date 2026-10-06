@@ -22,11 +22,6 @@ public class SchoolClassService : ISchoolClassService
         return await _schoolClassRepository.GetAllAsync();
     }
 
-    public async Task<SchoolClass?> GetByIdAsync(int id)
-    {
-        return await _schoolClassRepository.GetByIdAsync(id);
-    }
-
     public async Task AddAsync(SchoolClass schoolClass)
     {
         EntityValidator.Validate(schoolClass);
@@ -36,7 +31,15 @@ public class SchoolClassService : ISchoolClassService
             throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
         }
 
-        await _schoolClassRepository.AddAsync(schoolClass);
+        try
+        {
+            await _schoolClassRepository.AddAsync(schoolClass);
+        }
+        catch (DbUpdateException)
+        {
+            throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
+        }
+
         _logger.LogInformation("Class added: {Name} (Id: {Id})", schoolClass.Name, schoolClass.Id);
     }
 
@@ -49,7 +52,16 @@ public class SchoolClassService : ISchoolClassService
             throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
         }
 
-        var updated = await _schoolClassRepository.UpdateAsync(schoolClass);
+        bool updated;
+        try
+        {
+            updated = await _schoolClassRepository.UpdateAsync(schoolClass);
+        }
+        catch (DbUpdateException)
+        {
+            throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
+        }
+
         if (updated)
         {
             _logger.LogInformation("Class updated: Id {Id}", schoolClass.Id);
@@ -74,21 +86,23 @@ public class SchoolClassService : ISchoolClassService
         }
     }
 
-    public async Task AssignSubjectAsync(int classId, int subjectId)
+    public async Task<bool> AssignSubjectAsync(int classId, int subjectId)
     {
         var assigned = await _schoolClassRepository.AddSubjectAsync(classId, subjectId);
         if (assigned)
         {
             _logger.LogInformation("Subject {SubjectId} assigned to class {ClassId}", subjectId, classId);
         }
+        return assigned;
     }
 
-    public async Task RemoveSubjectAsync(int classId, int subjectId)
+    public async Task<bool> RemoveSubjectAsync(int classId, int subjectId)
     {
         var removed = await _schoolClassRepository.RemoveSubjectAsync(classId, subjectId);
         if (removed)
         {
             _logger.LogInformation("Subject {SubjectId} removed from class {ClassId}", subjectId, classId);
         }
+        return removed;
     }
 }

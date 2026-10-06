@@ -22,11 +22,6 @@ public class SubjectService : ISubjectService
         return await _subjectRepository.GetAllAsync();
     }
 
-    public async Task<Subject?> GetByIdAsync(int id)
-    {
-        return await _subjectRepository.GetByIdAsync(id);
-    }
-
     public async Task AddAsync(Subject subject)
     {
         EntityValidator.Validate(subject);
@@ -36,7 +31,15 @@ public class SubjectService : ISubjectService
             throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
         }
 
-        await _subjectRepository.AddAsync(subject);
+        try
+        {
+            await _subjectRepository.AddAsync(subject);
+        }
+        catch (DbUpdateException)
+        {
+            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+        }
+
         _logger.LogInformation("Subject added: {Name} (Id: {Id})", subject.Name, subject.Id);
     }
 
@@ -49,7 +52,16 @@ public class SubjectService : ISubjectService
             throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
         }
 
-        var updated = await _subjectRepository.UpdateAsync(subject);
+        bool updated;
+        try
+        {
+            updated = await _subjectRepository.UpdateAsync(subject);
+        }
+        catch (DbUpdateException)
+        {
+            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+        }
+
         if (updated)
         {
             _logger.LogInformation("Subject updated: Id {Id}", subject.Id);

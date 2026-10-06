@@ -41,6 +41,18 @@ public class SchoolDbContext : DbContext
             .HasForeignKey(g => g.SubjectId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<SchoolClass>()
+            .Property(c => c.Name)
+            .HasMaxLength(10);
+
+        modelBuilder.Entity<SchoolClass>()
+            .HasIndex(c => c.Name)
+            .IsUnique();
+
+        modelBuilder.Entity<Subject>()
+            .HasIndex(s => s.Name)
+            .IsUnique();
+
         modelBuilder.Entity<User>()
             .Property(u => u.Login)
             .HasMaxLength(256);

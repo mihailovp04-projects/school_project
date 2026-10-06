@@ -21,15 +21,6 @@ public class SubjectRepository : ISubjectRepository
             .ToListAsync();
     }
 
-    public async Task<Subject?> GetByIdAsync(int id)
-    {
-        await using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.Subjects
-            .Include(s => s.SchoolClasses)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == id);
-    }
-
     public async Task AddAsync(Subject subject)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

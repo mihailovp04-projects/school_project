@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -10,6 +10,7 @@ using School.Domain;
 using School.Services.Security;
 using School.Services.Services;
 using School.Web.Components;
+using School.Web.Infrastructure;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -56,9 +57,9 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 
 static bool IsLocalUrl(string? url) =>
     !string.IsNullOrEmpty(url)
@@ -89,6 +90,13 @@ app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userS
 
 app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService userService, [FromForm] string login, [FromForm] string password) =>
 {
+    login = login?.Trim() ?? string.Empty;
+
+    if (login.Length == 0 || login.Length > 256)
+    {
+        return Results.Redirect("/register?error=3");
+    }
+
     if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
     {
         return Results.Redirect("/register?error=2");
@@ -110,7 +118,14 @@ app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService us
         Role = role
     };
 
-    await userService.AddAsync(newUser);
+    try
+    {
+        await userService.AddAsync(newUser);
+    }
+    catch (ArgumentException)
+    {
+        return Results.Redirect("/register?error=4");
+    }
 
     var claims = new List<Claim>
     {
