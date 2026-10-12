@@ -1,4 +1,4 @@
-﻿namespace School.Domain.Exceptions;
+namespace School.Data.Contracts.Exceptions;
 
 public class DuplicateNameException : Exception
 {

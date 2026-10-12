@@ -1,6 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using School.Domain.Exceptions;
+using School.Data.Contracts.Exceptions;
 
 namespace School.Data;
 

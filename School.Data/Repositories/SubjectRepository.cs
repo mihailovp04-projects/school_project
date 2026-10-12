@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using School.Data.Contracts.Repositories;
 using School.Domain;
 
 namespace School.Data.Repositories;

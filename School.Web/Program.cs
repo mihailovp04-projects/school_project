@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using School.Data;
+using School.Data.Contracts.Repositories;
 using School.Data.Repositories;
 using School.Domain;
 using School.Services.Security;

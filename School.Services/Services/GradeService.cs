@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
-using School.Data.Repositories;
+using School.Data.Contracts.Repositories;
 using School.Domain;
 using School.Services.Validation;
 

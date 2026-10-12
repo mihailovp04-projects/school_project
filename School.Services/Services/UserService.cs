@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using School.Data.Repositories;
+using School.Data.Contracts.Exceptions;
+using School.Data.Contracts.Repositories;
 using School.Domain;
-using School.Domain.Exceptions;
 using School.Services.Validation;
 
 namespace School.Services.Services;

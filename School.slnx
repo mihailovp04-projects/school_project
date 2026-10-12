@@ -1,4 +1,5 @@
-<Solution>
+﻿<Solution>
+  <Project Path="School.Data.Contracts/School.Data.Contracts.csproj" />
   <Project Path="School.Data/School.Data.csproj" />
   <Project Path="School.Domain/School.Domain.csproj" />
   <Project Path="School.Services/School.Services.csproj" />
