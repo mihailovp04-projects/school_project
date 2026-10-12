@@ -1,13 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Validation;
 
 namespace School.Services.Services;
 
 public class UserService : IUserService
 {
+    private const string DuplicateLoginMessage = "Не удалось завершить регистрацию. Попробуйте другой логин.";
+
     private readonly IUserRepository _userRepository;
     private readonly ILogger<UserService> _logger;
 
@@ -35,9 +37,9 @@ public class UserService : IUserService
         {
             await _userRepository.AddAsync(user);
         }
-        catch (DbUpdateException)
+        catch (DuplicateNameException ex)
         {
-            throw new ArgumentException("Не удалось завершить регистрацию. Попробуйте другой логин.");
+            throw new ArgumentException(DuplicateLoginMessage, ex);
         }
 
         _logger.LogInformation("User added: {Login} (Role: {Role})", user.Login, user.Role);

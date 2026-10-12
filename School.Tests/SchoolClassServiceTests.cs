@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Services;
 
 namespace School.Tests;
@@ -32,7 +32,7 @@ public class SchoolClassServiceTests
     [Fact]
     public async Task AddAsync_ValidName_CallsRepository()
     {
-        var schoolClass = new SchoolClass { Name = "5-A" };
+        var schoolClass = new SchoolClass { Name = "5-А" };
 
         await _service.AddAsync(schoolClass);
 
@@ -43,10 +43,10 @@ public class SchoolClassServiceTests
     public async Task AddAsync_DuplicateName_ThrowsArgumentException()
     {
         _repositoryMock
-            .Setup(r => r.ExistsByNameAsync("5-A", It.IsAny<int?>()))
+            .Setup(r => r.ExistsByNameAsync("5-А", It.IsAny<int?>()))
             .ReturnsAsync(true);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(new SchoolClass { Name = "5-A" }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(new SchoolClass { Name = "5-А" }));
 
         _repositoryMock.Verify(r => r.AddAsync(It.IsAny<SchoolClass>()), Times.Never);
     }
@@ -56,19 +56,19 @@ public class SchoolClassServiceTests
     {
         _repositoryMock
             .Setup(r => r.AddAsync(It.IsAny<SchoolClass>()))
-            .ThrowsAsync(new DbUpdateException("duplicate"));
+            .ThrowsAsync(new DuplicateNameException("duplicate"));
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(new SchoolClass { Name = "5-A" }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(new SchoolClass { Name = "5-А" }));
     }
 
     [Fact]
     public async Task UpdateAsync_DuplicateName_ThrowsArgumentException()
     {
         _repositoryMock
-            .Setup(r => r.ExistsByNameAsync("5-B", 3))
+            .Setup(r => r.ExistsByNameAsync("5-Б", 3))
             .ReturnsAsync(true);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.UpdateAsync(new SchoolClass { Id = 3, Name = "5-B" }));
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.UpdateAsync(new SchoolClass { Id = 3, Name = "5-Б" }));
 
         _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<SchoolClass>()), Times.Never);
     }
@@ -76,10 +76,50 @@ public class SchoolClassServiceTests
     [Fact]
     public async Task UpdateAsync_MissingRecord_ReturnsFalse()
     {
-        var schoolClass = new SchoolClass { Id = 9, Name = "5-A" };
+        var schoolClass = new SchoolClass { Id = 9, Name = "5-А" };
         _repositoryMock.Setup(r => r.UpdateAsync(schoolClass)).ReturnsAsync(false);
 
         var result = await _service.UpdateAsync(schoolClass);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UniqueIndexViolation_ThrowsArgumentException()
+    {
+        _repositoryMock
+            .Setup(r => r.UpdateAsync(It.IsAny<SchoolClass>()))
+            .ThrowsAsync(new DuplicateNameException("duplicate"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.UpdateAsync(new SchoolClass { Id = 3, Name = "5-Б" }));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ClassHasStudents_ThrowsArgumentException()
+    {
+        _repositoryMock
+            .Setup(r => r.DeleteAsync(4))
+            .ThrowsAsync(new EntityInUseException("in use"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.DeleteAsync(4));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ExistingClass_ReturnsTrue()
+    {
+        _repositoryMock.Setup(r => r.DeleteAsync(4)).ReturnsAsync(true);
+
+        var result = await _service.DeleteAsync(4);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task RemoveSubjectAsync_NotAssigned_ReturnsFalse()
+    {
+        _repositoryMock.Setup(r => r.RemoveSubjectAsync(1, 2)).ReturnsAsync(false);
+
+        var result = await _service.RemoveSubjectAsync(1, 2);
 
         Assert.False(result);
     }
@@ -109,7 +149,6 @@ public class SchoolClassServiceTests
     [InlineData("9-Б")]
     [InlineData("11-В")]
     [InlineData("12-А")]
-    [InlineData("12-A")]
     public async Task AddAsync_ValidFormat_CallsRepository(string name)
     {
         var schoolClass = new SchoolClass { Name = name };
@@ -125,6 +164,7 @@ public class SchoolClassServiceTests
     [InlineData("5А")]
     [InlineData("5-а")]
     [InlineData("5-АБ")]
+    [InlineData("5-A")]
     public async Task AddAsync_InvalidFormat_ThrowsArgumentException(string name)
     {
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(new SchoolClass { Name = name }));

@@ -25,7 +25,7 @@ public class SubjectRepository : ISubjectRepository
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         context.Subjects.Add(subject);
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingUniqueAsync(subject.Name);
     }
 
     public async Task<bool> UpdateAsync(Subject subject)
@@ -38,7 +38,7 @@ public class SubjectRepository : ISubjectRepository
         }
 
         existing.Name = subject.Name;
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingUniqueAsync(subject.Name);
         return true;
     }
 
@@ -52,15 +52,19 @@ public class SubjectRepository : ISubjectRepository
         }
 
         context.Subjects.Remove(subject);
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingReferencesAsync();
         return true;
     }
 
     public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.Subjects
-            .Where(s => excludeId == null || s.Id != excludeId)
-            .AnyAsync(s => s.Name.ToLower() == name.ToLower());
+        IQueryable<Subject> query = context.Subjects;
+        if (excludeId.HasValue)
+        {
+            query = query.Where(s => s.Id != excludeId.Value);
+        }
+
+        return await query.AnyAsync(s => s.Name == name);
     }
 }

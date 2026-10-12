@@ -67,7 +67,7 @@ public class StudentRepository : IStudentRepository
         }
 
         context.Students.Remove(student);
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingReferencesAsync();
         return true;
     }
 }

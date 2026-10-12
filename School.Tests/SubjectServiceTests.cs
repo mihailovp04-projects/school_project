@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
+﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Services;
 
 namespace School.Tests;
@@ -56,7 +56,7 @@ public class SubjectServiceTests
     {
         _repositoryMock
             .Setup(r => r.AddAsync(It.IsAny<Subject>()))
-            .ThrowsAsync(new DbUpdateException("duplicate"));
+            .ThrowsAsync(new DuplicateNameException("duplicate"));
 
         await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(new Subject { Name = "Mathematics" }));
     }
@@ -82,6 +82,16 @@ public class SubjectServiceTests
         var result = await _service.UpdateAsync(subject);
 
         Assert.False(result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SubjectHasGrades_ThrowsArgumentException()
+    {
+        _repositoryMock
+            .Setup(r => r.DeleteAsync(7))
+            .ThrowsAsync(new EntityInUseException("in use"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.DeleteAsync(7));
     }
 
     [Fact]

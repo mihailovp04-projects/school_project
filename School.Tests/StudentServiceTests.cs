@@ -2,6 +2,7 @@
 using Moq;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Services;
 
 namespace School.Tests;
@@ -75,5 +76,25 @@ public class StudentServiceTests
         await _service.AddAsync(student);
 
         _repositoryMock.Verify(r => r.AddAsync(student), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_StudentHasGrades_ThrowsArgumentException()
+    {
+        _repositoryMock
+            .Setup(r => r.DeleteAsync(5))
+            .ThrowsAsync(new EntityInUseException("in use"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.DeleteAsync(5));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_MissingRecord_ReturnsFalse()
+    {
+        _repositoryMock.Setup(r => r.DeleteAsync(5)).ReturnsAsync(false);
+
+        var result = await _service.DeleteAsync(5);
+
+        Assert.False(result);
     }
 }

@@ -1,13 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Validation;
 
 namespace School.Services.Services;
 
 public class StudentService : IStudentService
 {
+    private const string StudentInUseMessage = "Нельзя удалить ученика, у которого есть оценки.";
+
     private readonly IStudentRepository _studentRepository;
     private readonly ILogger<StudentService> _logger;
 
@@ -47,18 +49,20 @@ public class StudentService : IStudentService
 
     public async Task<bool> DeleteAsync(int id)
     {
+        bool deleted;
         try
         {
-            var deleted = await _studentRepository.DeleteAsync(id);
-            if (deleted)
-            {
-                _logger.LogInformation("Student deleted: Id {Id}", id);
-            }
-            return deleted;
+            deleted = await _studentRepository.DeleteAsync(id);
         }
-        catch (DbUpdateException)
+        catch (EntityInUseException ex)
         {
-            throw new ArgumentException("Нельзя удалить ученика, у которого есть оценки.");
+            throw new ArgumentException(StudentInUseMessage, ex);
         }
+
+        if (deleted)
+        {
+            _logger.LogInformation("Student deleted: Id {Id}", id);
+        }
+        return deleted;
     }
 }

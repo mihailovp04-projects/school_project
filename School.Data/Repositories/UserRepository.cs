@@ -28,6 +28,6 @@ public class UserRepository : IUserRepository
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         context.Users.Add(user);
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingUniqueAsync(user.Login);
     }
 }

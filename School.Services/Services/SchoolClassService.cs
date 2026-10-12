@@ -1,13 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Validation;
 
 namespace School.Services.Services;
 
 public class SchoolClassService : ISchoolClassService
 {
+    private const string ClassInUseMessage = "Нельзя удалить класс, в котором есть ученики.";
+
     private readonly ISchoolClassRepository _schoolClassRepository;
     private readonly ILogger<SchoolClassService> _logger;
 
@@ -28,16 +30,16 @@ public class SchoolClassService : ISchoolClassService
 
         if (await _schoolClassRepository.ExistsByNameAsync(schoolClass.Name))
         {
-            throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(schoolClass.Name));
         }
 
         try
         {
             await _schoolClassRepository.AddAsync(schoolClass);
         }
-        catch (DbUpdateException)
+        catch (DuplicateNameException ex)
         {
-            throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(schoolClass.Name), ex);
         }
 
         _logger.LogInformation("Class added: {Name} (Id: {Id})", schoolClass.Name, schoolClass.Id);
@@ -49,7 +51,7 @@ public class SchoolClassService : ISchoolClassService
 
         if (await _schoolClassRepository.ExistsByNameAsync(schoolClass.Name, schoolClass.Id))
         {
-            throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(schoolClass.Name));
         }
 
         bool updated;
@@ -57,9 +59,9 @@ public class SchoolClassService : ISchoolClassService
         {
             updated = await _schoolClassRepository.UpdateAsync(schoolClass);
         }
-        catch (DbUpdateException)
+        catch (DuplicateNameException ex)
         {
-            throw new ArgumentException($"Класс с названием \"{schoolClass.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(schoolClass.Name), ex);
         }
 
         if (updated)
@@ -71,19 +73,21 @@ public class SchoolClassService : ISchoolClassService
 
     public async Task<bool> DeleteAsync(int id)
     {
+        bool deleted;
         try
         {
-            var deleted = await _schoolClassRepository.DeleteAsync(id);
-            if (deleted)
-            {
-                _logger.LogInformation("Class deleted: Id {Id}", id);
-            }
-            return deleted;
+            deleted = await _schoolClassRepository.DeleteAsync(id);
         }
-        catch (DbUpdateException)
+        catch (EntityInUseException ex)
         {
-            throw new ArgumentException("Нельзя удалить класс, в котором есть ученики.");
+            throw new ArgumentException(ClassInUseMessage, ex);
         }
+
+        if (deleted)
+        {
+            _logger.LogInformation("Class deleted: Id {Id}", id);
+        }
+        return deleted;
     }
 
     public async Task<bool> AssignSubjectAsync(int classId, int subjectId)
@@ -105,4 +109,6 @@ public class SchoolClassService : ISchoolClassService
         }
         return removed;
     }
+
+    private static string DuplicateNameMessage(string name) => $"Класс с названием \"{name}\" уже существует.";
 }

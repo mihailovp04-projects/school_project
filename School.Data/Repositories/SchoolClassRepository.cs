@@ -26,7 +26,7 @@ public class SchoolClassRepository : ISchoolClassRepository
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
         context.SchoolClasses.Add(schoolClass);
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingUniqueAsync(schoolClass.Name);
     }
 
     public async Task<bool> UpdateAsync(SchoolClass schoolClass)
@@ -39,7 +39,7 @@ public class SchoolClassRepository : ISchoolClassRepository
         }
 
         existing.Name = schoolClass.Name;
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingUniqueAsync(schoolClass.Name);
         return true;
     }
 
@@ -53,16 +53,20 @@ public class SchoolClassRepository : ISchoolClassRepository
         }
 
         context.SchoolClasses.Remove(schoolClass);
-        await context.SaveChangesAsync();
+        await context.SaveChangesCheckingReferencesAsync();
         return true;
     }
 
     public async Task<bool> ExistsByNameAsync(string name, int? excludeId = null)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.SchoolClasses
-            .Where(c => excludeId == null || c.Id != excludeId)
-            .AnyAsync(c => c.Name.ToLower() == name.ToLower());
+        IQueryable<SchoolClass> query = context.SchoolClasses;
+        if (excludeId.HasValue)
+        {
+            query = query.Where(c => c.Id != excludeId.Value);
+        }
+
+        return await query.AnyAsync(c => c.Name == name);
     }
 
     public async Task<bool> AddSubjectAsync(int classId, int subjectId)

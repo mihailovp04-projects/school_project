@@ -1,13 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Validation;
 
 namespace School.Services.Services;
 
 public class SubjectService : ISubjectService
 {
+    private const string SubjectInUseMessage = "Нельзя удалить предмет, по которому уже есть оценки.";
+
     private readonly ISubjectRepository _subjectRepository;
     private readonly ILogger<SubjectService> _logger;
 
@@ -28,16 +30,16 @@ public class SubjectService : ISubjectService
 
         if (await _subjectRepository.ExistsByNameAsync(subject.Name))
         {
-            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(subject.Name));
         }
 
         try
         {
             await _subjectRepository.AddAsync(subject);
         }
-        catch (DbUpdateException)
+        catch (DuplicateNameException ex)
         {
-            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(subject.Name), ex);
         }
 
         _logger.LogInformation("Subject added: {Name} (Id: {Id})", subject.Name, subject.Id);
@@ -49,7 +51,7 @@ public class SubjectService : ISubjectService
 
         if (await _subjectRepository.ExistsByNameAsync(subject.Name, subject.Id))
         {
-            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(subject.Name));
         }
 
         bool updated;
@@ -57,9 +59,9 @@ public class SubjectService : ISubjectService
         {
             updated = await _subjectRepository.UpdateAsync(subject);
         }
-        catch (DbUpdateException)
+        catch (DuplicateNameException ex)
         {
-            throw new ArgumentException($"Предмет с названием \"{subject.Name}\" уже существует.");
+            throw new ArgumentException(DuplicateNameMessage(subject.Name), ex);
         }
 
         if (updated)
@@ -71,18 +73,22 @@ public class SubjectService : ISubjectService
 
     public async Task<bool> DeleteAsync(int id)
     {
+        bool deleted;
         try
         {
-            var deleted = await _subjectRepository.DeleteAsync(id);
-            if (deleted)
-            {
-                _logger.LogInformation("Subject deleted: Id {Id}", id);
-            }
-            return deleted;
+            deleted = await _subjectRepository.DeleteAsync(id);
         }
-        catch (DbUpdateException)
+        catch (EntityInUseException ex)
         {
-            throw new ArgumentException("Нельзя удалить предмет, по которому уже есть оценки.");
+            throw new ArgumentException(SubjectInUseMessage, ex);
         }
+
+        if (deleted)
+        {
+            _logger.LogInformation("Subject deleted: Id {Id}", id);
+        }
+        return deleted;
     }
+
+    private static string DuplicateNameMessage(string name) => $"Предмет с названием \"{name}\" уже существует.";
 }

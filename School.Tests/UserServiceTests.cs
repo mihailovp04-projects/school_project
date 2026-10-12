@@ -2,6 +2,7 @@
 using Moq;
 using School.Data.Repositories;
 using School.Domain;
+using School.Domain.Exceptions;
 using School.Services.Services;
 
 namespace School.Tests;
@@ -46,5 +47,15 @@ public class UserServiceTests
         await _service.AddAsync(user);
 
         _repositoryMock.Verify(r => r.AddAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddAsync_DuplicateLogin_ThrowsArgumentException()
+    {
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<User>()))
+            .ThrowsAsync(new DuplicateNameException("duplicate"));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _service.AddAsync(new User { Login = "ivanov", Role = "Teacher" }));
     }
 }
