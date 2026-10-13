@@ -13,7 +13,6 @@ using School.Services.Services;
 using School.Web.Components;
 using School.Web.Infrastructure;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContextFactory<SchoolDbContext>(options =>
@@ -69,7 +68,7 @@ static bool IsLocalUrl(string? url) =>
 
 app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userService, [FromForm] string login, [FromForm] string password, [FromForm] string? returnUrl) =>
 {
-    var user = await userService.GetByLoginAsync(login);
+    var user = await userService.GetByLoginAsync(login.Trim());
     if (user == null || !PasswordHasher.Verify(password, user.PasswordHash))
     {
         var failureUrl = IsLocalUrl(returnUrl)
@@ -89,9 +88,9 @@ app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userS
     return Results.Redirect(IsLocalUrl(returnUrl) ? returnUrl! : "/");
 });
 
-app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService userService, [FromForm] string login, [FromForm] string password) =>
+app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService userService, ILogger<Program> logger, [FromForm] string login, [FromForm] string password) =>
 {
-    login = login?.Trim() ?? string.Empty;
+    login = login.Trim();
 
     if (login.Length == 0 || login.Length > 256)
     {
@@ -123,9 +122,10 @@ app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService us
     {
         await userService.AddAsync(newUser);
     }
-    catch (ArgumentException)
+    catch (ArgumentException ex)
     {
-        return Results.Redirect("/register?error=4");
+        logger.LogInformation("Registration rejected for {Login}: {Reason}", login, ex.Message);
+        return Results.Redirect("/register?error=1");
     }
 
     var claims = new List<Claim>

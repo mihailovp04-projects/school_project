@@ -1,8 +1,8 @@
-﻿@page "/students"
+@page "/students"
 @attribute [Authorize]
+@inherits CrudPage<Student>
 @inject IStudentService StudentService
 @inject ISchoolClassService SchoolClassService
-@inject AdminGuard AdminGuard
 
 <div class="page-header">
     <h1>Ученики</h1>
@@ -26,49 +26,49 @@
 </div>
 
 <div class="toolbar">
-    @if (!showForm)
+    @if (!IsFormVisible)
     {
         <button class="btn-primary" @onclick="ShowAddForm">Добавить ученика</button>
     }
 </div>
 
-@if (!string.IsNullOrEmpty(pageMessage))
+@if (!string.IsNullOrEmpty(PageMessage))
 {
-    <p class="form-error">@pageMessage</p>
+    <p class="form-error">@PageMessage</p>
 }
 
-@if (showForm)
+@if (IsFormVisible)
 {
     <EntityFormCard TItem="Student"
-                     Title="@(editingId == null ? "Новый ученик" : "Редактирование ученика")"
-                     Model="formModel"
-                     OnSave="HandleSave"
-                     OnCancel="CancelForm"
-                     ErrorMessage="@errorMessage"
-                     FormName="StudentForm">
+                    Title="@(EditingId == null ? "Новый ученик" : "Редактирование ученика")"
+                    Model="FormModel"
+                    OnSave="HandleSave"
+                    OnCancel="CloseForm"
+                    ErrorMessage="@FormError"
+                    FormName="StudentForm">
         <div class="form-group">
             <label>Имя</label>
-            <InputText @bind-Value="formModel.FirstName" />
+            <InputText @bind-Value="FormModel.FirstName" />
         </div>
 
         <div class="form-group">
             <label>Фамилия</label>
-            <InputText @bind-Value="formModel.LastName" />
+            <InputText @bind-Value="FormModel.LastName" />
         </div>
 
         <div class="form-group">
             <label>Дата рождения</label>
-            <InputDate @bind-Value="formModel.BirthDate" />
+            <InputDate @bind-Value="FormModel.BirthDate" />
         </div>
 
         <div class="form-group">
             <label>Телефон</label>
-            <InputText @bind-Value="formModel.Phone" placeholder="+37369123456" />
+            <InputText @bind-Value="FormModel.Phone" placeholder="+37369123456" />
         </div>
 
         <div class="form-group">
             <label>Класс</label>
-            <select @bind="formModel.SchoolClassId">
+            <select @bind="FormModel.SchoolClassId">
                 <option value="0">-- выберите класс --</option>
                 @if (schoolClasses != null)
                 {
@@ -86,66 +86,56 @@
 {
     <p class="muted">Загрузка...</p>
 }
+else if (filteredStudents.Count == 0)
+{
+    <div class="empty-state">Ничего не найдено.</div>
+}
 else
 {
-    if (filteredStudents.Count == 0)
-    {
-        <div class="empty-state">Ничего не найдено.</div>
-    }
-    else
-    {
-        <div class="table-container">
-            <table>
-                <thead>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Фамилия</th>
+                    <th>Имя</th>
+                    <th>Класс</th>
+                    <th>Дата рождения</th>
+                    <th>Телефон</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var student in filteredStudents)
+                {
                     <tr>
-                        <th>Фамилия</th>
-                        <th>Имя</th>
-                        <th>Класс</th>
-                        <th>Дата рождения</th>
-                        <th>Телефон</th>
-                        <th>Действия</th>
+                        <td>@student.LastName</td>
+                        <td>@student.FirstName</td>
+                        <td>@student.SchoolClass.Name</td>
+                        <td>@student.BirthDate.ToShortDateString()</td>
+                        <td>@student.Phone</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="btn-link-action" @onclick="() => ShowEditForm(student)">Изменить</button>
+                                <AuthorizeView Roles="Admin">
+                                    <Authorized>
+                                        <button class="btn-link-action danger" @onclick="() => HandleDelete(student.Id)">Удалить</button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var student in filteredStudents)
-                    {
-                        <tr>
-                            <td>@student.LastName</td>
-                            <td>@student.FirstName</td>
-                            <td>@student.SchoolClass.Name</td>
-                            <td>@student.BirthDate.ToShortDateString()</td>
-                            <td>@student.Phone</td>
-                            <td>
-                                <div class="table-actions">
-                                    <button class="btn-link-action" @onclick="() => ShowEditForm(student)">Изменить</button>
-                                    <AuthorizeView Roles="Admin">
-                                        <Authorized>
-                                            <button class="btn-link-action danger" @onclick="() => HandleDelete(student.Id)">Удалить</button>
-                                        </Authorized>
-                                    </AuthorizeView>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
-    private const string NotFoundMessage = "Запись не найдена: возможно, её уже удалил другой пользователь. Список обновлён.";
-
     private List<Student>? students;
     private List<Student> filteredStudents = new();
     private List<SchoolClass>? schoolClasses;
-    private Student formModel = new();
-    private int? editingId;
-    private int filterClassId = 0;
+    private int filterClassId;
     private string filterLastName = string.Empty;
-    private bool showForm = false;
-    private string? errorMessage;
-    private string? pageMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -176,7 +166,7 @@ else
 
         if (!string.IsNullOrWhiteSpace(filterLastName))
         {
-            result = result.Where(s => s.LastName.Contains(filterLastName, StringComparison.OrdinalIgnoreCase));
+            result = result.Where(s => s.LastName.Contains(filterLastName.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
         filteredStudents = result.ToList();
@@ -184,16 +174,12 @@ else
 
     private void ShowAddForm()
     {
-        formModel = new();
-        editingId = null;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        OpenForm(new Student(), null);
     }
 
     private void ShowEditForm(Student student)
     {
-        formModel = new Student
+        OpenForm(new Student
         {
             Id = student.Id,
             FirstName = student.FirstName,
@@ -201,81 +187,27 @@ else
             BirthDate = student.BirthDate,
             Phone = student.Phone,
             SchoolClassId = student.SchoolClassId
-        };
-        editingId = student.Id;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        }, student.Id);
     }
 
-    private void CancelForm()
+    private Task HandleSave()
     {
-        showForm = false;
-        errorMessage = null;
+        return SaveFormAsync(EditingId == null ? "AddStudent" : "UpdateStudent", SaveStudentAsync, ReloadStudentsAsync);
     }
 
-    private async Task HandleSave()
+    private async Task<bool> SaveStudentAsync()
     {
-        try
+        if (EditingId == null)
         {
-            var saved = true;
+            await StudentService.AddAsync(FormModel);
+            return true;
+        }
 
-            if (editingId == null)
-            {
-                await StudentService.AddAsync(formModel);
-            }
-            else
-            {
-                formModel.Id = editingId.Value;
-                saved = await StudentService.UpdateAsync(formModel);
-            }
-
-            await ReloadStudentsAsync();
-            showForm = false;
-            errorMessage = null;
-            pageMessage = saved ? null : NotFoundMessage;
-        }
-        catch (ArgumentException ex)
-        {
-            errorMessage = ex.Message;
-        }
-        catch (Exception)
-        {
-            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return await StudentService.UpdateAsync(FormModel);
     }
 
-    private async Task HandleDelete(int id)
+    private Task HandleDelete(int id)
     {
-        pageMessage = null;
-
-        var result = await AdminGuard.ConfirmAdminActionAsync("Удалить этого ученика?");
-        if (result == null)
-        {
-            pageMessage = "У вас нет прав для удаления.";
-            return;
-        }
-        if (result != true)
-        {
-            return;
-        }
-
-        try
-        {
-            var deleted = await StudentService.DeleteAsync(id);
-            await ReloadStudentsAsync();
-            if (!deleted)
-            {
-                pageMessage = NotFoundMessage;
-            }
-        }
-        catch (ArgumentException ex)
-        {
-            pageMessage = ex.Message;
-        }
-        catch (Exception)
-        {
-            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return RunAdminActionAsync("Удалить этого ученика?", "DeleteStudent", id, () => StudentService.DeleteAsync(id), ReloadStudentsAsync);
     }
 }

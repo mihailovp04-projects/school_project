@@ -1,37 +1,37 @@
-﻿@page "/classes"
+@page "/classes"
 @attribute [Authorize]
+@inherits CrudPage<SchoolClass>
 @inject ISchoolClassService SchoolClassService
 @inject ISubjectService SubjectService
-@inject AdminGuard AdminGuard
 
 <div class="page-header">
     <h1>Классы</h1>
 </div>
 
 <div class="toolbar">
-    @if (!showForm)
+    @if (!IsFormVisible)
     {
         <button class="btn-primary" @onclick="ShowAddForm">Добавить класс</button>
     }
 </div>
 
-@if (!string.IsNullOrEmpty(pageMessage))
+@if (!string.IsNullOrEmpty(PageMessage))
 {
-    <p class="form-error">@pageMessage</p>
+    <p class="form-error">@PageMessage</p>
 }
 
-@if (showForm)
+@if (IsFormVisible)
 {
     <EntityFormCard TItem="SchoolClass"
-                     Title="@(editingId == null ? "Новый класс" : "Редактирование класса")"
-                     Model="formModel"
-                     OnSave="HandleSave"
-                     OnCancel="CancelForm"
-                     ErrorMessage="@errorMessage"
-                     FormName="ClassForm">
+                    Title="@(EditingId == null ? "Новый класс" : "Редактирование класса")"
+                    Model="FormModel"
+                    OnSave="HandleSave"
+                    OnCancel="CloseForm"
+                    ErrorMessage="@FormError"
+                    FormName="ClassForm">
         <div class="form-group">
             <label>Название класса</label>
-            <InputText @bind-Value="formModel.Name" placeholder="Например, 5-А" />
+            <InputText @bind-Value="FormModel.Name" placeholder="Например, 5-А" />
         </div>
     </EntityFormCard>
 }
@@ -65,12 +65,9 @@
         <div class="assign-subject-row">
             <select @bind="selectedSubjectId">
                 <option value="0">-- выберите предмет --</option>
-                @if (subjects != null)
+                @foreach (var subject in GetUnassignedSubjects(assigningClass))
                 {
-                    @foreach (var subject in GetUnassignedSubjects(assigningClass))
-                    {
-                        <option value="@subject.Id">@subject.Name</option>
-                    }
+                    <option value="@subject.Id">@subject.Name</option>
                 }
             </select>
             <button class="btn-secondary" @onclick="HandleAssignSubject">Привязать</button>
@@ -169,23 +166,16 @@ else
 }
 
 @code {
-    private const string NotFoundMessage = "Запись не найдена: возможно, её уже удалил другой пользователь. Список обновлён.";
-
     private List<SchoolClass>? schoolClasses;
-    private List<Subject>? subjects;
-    private SchoolClass formModel = new();
+    private List<Subject> subjects = new();
     private SchoolClass? assigningClass;
-    private int? editingId;
     private int? expandedClassId;
     private int selectedSubjectId;
-    private bool showForm = false;
-    private string? errorMessage;
-    private string? pageMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        schoolClasses = await SchoolClassService.GetAllAsync();
         subjects = await SubjectService.GetAllAsync();
+        await ReloadClassesAsync();
     }
 
     private async Task ReloadClassesAsync()
@@ -194,98 +184,40 @@ else
 
         if (assigningClass != null)
         {
-            var current = assigningClass.Id;
-            assigningClass = schoolClasses.FirstOrDefault(c => c.Id == current);
+            var currentId = assigningClass.Id;
+            assigningClass = schoolClasses.FirstOrDefault(c => c.Id == currentId);
         }
     }
 
     private void ShowAddForm()
     {
-        formModel = new();
-        editingId = null;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        OpenForm(new SchoolClass(), null);
     }
 
     private void ShowEditForm(SchoolClass schoolClass)
     {
-        formModel = new SchoolClass { Id = schoolClass.Id, Name = schoolClass.Name };
-        editingId = schoolClass.Id;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        OpenForm(new SchoolClass { Id = schoolClass.Id, Name = schoolClass.Name }, schoolClass.Id);
     }
 
-    private void CancelForm()
+    private Task HandleSave()
     {
-        showForm = false;
-        errorMessage = null;
+        return SaveFormAsync(EditingId == null ? "AddClass" : "UpdateClass", SaveClassAsync, ReloadClassesAsync);
     }
 
-    private async Task HandleSave()
+    private async Task<bool> SaveClassAsync()
     {
-        try
+        if (EditingId == null)
         {
-            var saved = true;
+            await SchoolClassService.AddAsync(FormModel);
+            return true;
+        }
 
-            if (editingId == null)
-            {
-                await SchoolClassService.AddAsync(formModel);
-            }
-            else
-            {
-                formModel.Id = editingId.Value;
-                saved = await SchoolClassService.UpdateAsync(formModel);
-            }
-
-            await ReloadClassesAsync();
-            showForm = false;
-            errorMessage = null;
-            pageMessage = saved ? null : NotFoundMessage;
-        }
-        catch (ArgumentException ex)
-        {
-            errorMessage = ex.Message;
-        }
-        catch (Exception)
-        {
-            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return await SchoolClassService.UpdateAsync(FormModel);
     }
 
-    private async Task HandleDelete(int id)
+    private Task HandleDelete(int id)
     {
-        pageMessage = null;
-
-        var result = await AdminGuard.ConfirmAdminActionAsync("Удалить этот класс?");
-        if (result == null)
-        {
-            pageMessage = "У вас нет прав для удаления.";
-            return;
-        }
-        if (result != true)
-        {
-            return;
-        }
-
-        try
-        {
-            var deleted = await SchoolClassService.DeleteAsync(id);
-            await ReloadClassesAsync();
-            if (!deleted)
-            {
-                pageMessage = NotFoundMessage;
-            }
-        }
-        catch (ArgumentException ex)
-        {
-            pageMessage = ex.Message;
-        }
-        catch (Exception)
-        {
-            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return RunAdminActionAsync("Удалить этот класс?", "DeleteClass", id, () => SchoolClassService.DeleteAsync(id), ReloadClassesAsync);
     }
 
     private void ToggleDetails(int classId)
@@ -297,6 +229,7 @@ else
     {
         assigningClass = schoolClass;
         selectedSubjectId = 0;
+        PageMessage = null;
     }
 
     private void CloseAssignForm()
@@ -306,11 +239,6 @@ else
 
     private IEnumerable<Subject> GetUnassignedSubjects(SchoolClass schoolClass)
     {
-        if (subjects == null)
-        {
-            return Enumerable.Empty<Subject>();
-        }
-
         var assignedIds = schoolClass.Subjects.Select(s => s.Id).ToHashSet();
         return subjects.Where(s => !assignedIds.Contains(s.Id));
     }
@@ -322,51 +250,20 @@ else
             return;
         }
 
-        pageMessage = null;
-
-        try
-        {
-            var assigned = await SchoolClassService.AssignSubjectAsync(assigningClass.Id, selectedSubjectId);
-            await ReloadClassesAsync();
-            selectedSubjectId = 0;
-            if (!assigned)
-            {
-                pageMessage = NotFoundMessage;
-            }
-        }
-        catch (Exception)
-        {
-            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        var classId = assigningClass.Id;
+        var subjectId = selectedSubjectId;
+        await RunPageActionAsync("AssignSubject", classId, () => SchoolClassService.AssignSubjectAsync(classId, subjectId), ReloadClassesAsync);
+        selectedSubjectId = 0;
     }
 
-    private async Task HandleRemoveSubject(int subjectId)
+    private Task HandleRemoveSubject(int subjectId)
     {
-        pageMessage = null;
-
-        var result = await AdminGuard.ConfirmAdminActionAsync("Отвязать этот предмет?");
-        if (result == null)
+        if (assigningClass == null)
         {
-            pageMessage = "У вас нет прав для удаления.";
-            return;
-        }
-        if (result != true || assigningClass == null)
-        {
-            return;
+            return Task.CompletedTask;
         }
 
-        try
-        {
-            var removed = await SchoolClassService.RemoveSubjectAsync(assigningClass.Id, subjectId);
-            await ReloadClassesAsync();
-            if (!removed)
-            {
-                pageMessage = NotFoundMessage;
-            }
-        }
-        catch (Exception)
-        {
-            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        var classId = assigningClass.Id;
+        return RunAdminActionAsync("Отвязать этот предмет?", "RemoveSubject", classId, () => SchoolClassService.RemoveSubjectAsync(classId, subjectId), ReloadClassesAsync);
     }
 }

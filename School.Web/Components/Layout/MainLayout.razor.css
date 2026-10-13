@@ -21,17 +21,25 @@
     padding: 0 1.5rem;
 }
 
-    .top-row a {
-        color: var(--color-muted);
-    }
-
 .content {
     flex: 1;
     padding: 2rem 2.5rem;
 }
 
 @media (max-width: 640.98px) {
+    .page {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+    }
+
     .top-row {
-        justify-content: space-between;
+        display: none;
+    }
+
+    .content {
+        padding: 1.5rem 1rem;
     }
 }

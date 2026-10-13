@@ -1,11 +1,11 @@
-﻿@page "/register"
+@page "/register"
 @attribute [AllowAnonymous]
 
 <div class="page-header">
     <h1>Регистрация</h1>
 </div>
 
-<div class="card" style="max-width: 540px;">
+<div class="card card-narrow">
     <form method="post" action="/Account/Register">
         <AntiforgeryToken />
         <div class="form">
@@ -25,25 +25,21 @@
         </div>
     </form>
 
-    @if (Error == "1")
+    @if (ErrorText != null)
     {
-        <p class="form-error">Не удалось завершить регистрацию. Попробуйте другой логин.</p>
-    }
-    @if (Error == "2")
-    {
-        <p class="form-error">Пароль должен быть не короче 8 символов.</p>
-    }
-    @if (Error == "3")
-    {
-        <p class="form-error">Логин обязателен и не должен быть длиннее 256 символов.</p>
-    }
-    @if (Error == "4")
-    {
-        <p class="form-error">Не удалось завершить регистрацию. Попробуйте другой логин.</p>
+        <p class="form-error">@ErrorText</p>
     }
 </div>
 
 @code {
     [SupplyParameterFromQuery(Name = "error")]
     public string? Error { get; set; }
+
+    private string? ErrorText => Error switch
+    {
+        "1" => "Не удалось завершить регистрацию. Попробуйте другой логин.",
+        "2" => "Пароль должен быть не короче 8 символов.",
+        "3" => "Логин обязателен и не должен быть длиннее 256 символов.",
+        _ => null
+    };
 }

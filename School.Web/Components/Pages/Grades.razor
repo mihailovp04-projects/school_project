@@ -1,8 +1,8 @@
-﻿@page "/grades"
+@page "/grades"
 @attribute [Authorize]
+@inherits CrudPage<Grade>
 @inject IGradeService GradeService
 @inject IStudentService StudentService
-@inject AdminGuard AdminGuard
 
 <div class="page-header">
     <h1>Журнал оценок</h1>
@@ -22,7 +22,12 @@
     </select>
 </div>
 
-@if (selectedStudentId != 0 && selectedStudent != null)
+@if (!string.IsNullOrEmpty(PageMessage))
+{
+    <p class="form-error">@PageMessage</p>
+}
+
+@if (selectedStudent != null)
 {
     @if (overallAverage.HasValue)
     {
@@ -36,7 +41,7 @@
         </div>
     }
 
-    @if (subjectAverages != null && subjectAverages.Count > 0)
+    @if (subjectAverages.Count > 0)
     {
         <div class="subject-averages">
             @foreach (var item in subjectAverages)
@@ -54,7 +59,7 @@
     }
 
     <div class="toolbar">
-        @if (!showForm)
+        @if (!IsFormVisible)
         {
             @if (selectedStudent.SchoolClass.Subjects.Count > 0)
             {
@@ -67,23 +72,18 @@
         }
     </div>
 
-    @if (!string.IsNullOrEmpty(pageMessage))
-    {
-        <p class="form-error">@pageMessage</p>
-    }
-
-    @if (showForm)
+    @if (IsFormVisible)
     {
         <EntityFormCard TItem="Grade"
-                         Title="@(editingId == null ? "Новая оценка" : "Редактирование оценки")"
-                         Model="formModel"
-                         OnSave="HandleSave"
-                         OnCancel="CancelForm"
-                         ErrorMessage="@errorMessage"
-                         FormName="GradeForm">
+                        Title="@(EditingId == null ? "Новая оценка" : "Редактирование оценки")"
+                        Model="FormModel"
+                        OnSave="HandleSave"
+                        OnCancel="CloseForm"
+                        ErrorMessage="@FormError"
+                        FormName="GradeForm">
             <div class="form-group">
                 <label>Предмет</label>
-                <select @bind="formModel.SubjectId">
+                <select @bind="FormModel.SubjectId">
                     <option value="0">-- выберите предмет --</option>
                     @foreach (var subject in selectedStudent.SchoolClass.Subjects)
                     {
@@ -94,12 +94,12 @@
 
             <div class="form-group">
                 <label>Оценка (1-10)</label>
-                <InputNumber @bind-Value="formModel.Value" />
+                <InputNumber @bind-Value="FormModel.Value" />
             </div>
 
             <div class="form-group">
                 <label>Дата</label>
-                <InputDate @bind-Value="formModel.Date" />
+                <InputDate @bind-Value="FormModel.Date" />
             </div>
         </EntityFormCard>
     }
@@ -125,72 +125,62 @@
     {
         <div class="empty-state">У этого ученика пока нет оценок.</div>
     }
+    else if (filteredGrades.Count == 0)
+    {
+        <div class="empty-state">Нет оценок за выбранный период.</div>
+    }
     else
     {
-        if (filteredGrades.Count == 0)
-        {
-            <div class="empty-state">Нет оценок за выбранный период.</div>
-        }
-        else
-        {
-            <div class="table-container">
-                <table>
-                    <thead>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Предмет</th>
+                        <th>Оценка</th>
+                        <th>Дата</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var grade in filteredGrades)
+                    {
                         <tr>
-                            <th>Предмет</th>
-                            <th>Оценка</th>
-                            <th>Дата</th>
-                            <th>Действия</th>
+                            <td>@grade.Subject.Name</td>
+                            <td><span class="grade-badge @GradeBadgeClass(grade.Value)">@grade.Value</span></td>
+                            <td>@grade.Date.ToShortDateString()</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button class="btn-link-action" @onclick="() => ShowEditForm(grade)">Изменить</button>
+                                    <AuthorizeView Roles="Admin">
+                                        <Authorized>
+                                            <button class="btn-link-action danger" @onclick="() => HandleDelete(grade.Id)">Удалить</button>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var grade in filteredGrades)
-                        {
-                            <tr>
-                                <td>@grade.Subject.Name</td>
-                                <td>@GetGradeBadge(grade.Value)</td>
-                                <td>@grade.Date.ToShortDateString()</td>
-                                <td>
-                                    <div class="table-actions">
-                                        <button class="btn-link-action" @onclick="() => ShowEditForm(grade)">Изменить</button>
-                                        <AuthorizeView Roles="Admin">
-                                            <Authorized>
-                                                <button class="btn-link-action danger" @onclick="() => HandleDelete(grade.Id)">Удалить</button>
-                                            </Authorized>
-                                        </AuthorizeView>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 }
 
 @code {
-    private const string NotFoundMessage = "Запись не найдена: возможно, её уже удалил другой пользователь. Список обновлён.";
-
     private List<Student>? students;
     private Student? selectedStudent;
     private List<Grade>? studentGrades;
     private List<Grade> filteredGrades = new();
-    private List<SubjectAverage>? subjectAverages;
+    private List<SubjectAverage> subjectAverages = new();
     private double? overallAverage;
-    private Grade formModel = new() { Date = DateTime.Today };
-    private int? editingId;
-    private int selectedStudentId = 0;
-    private bool showForm = false;
-    private string? errorMessage;
-    private string? pageMessage;
+    private int selectedStudentId;
     private DateTime? filterFrom;
     private DateTime? filterTo;
 
-    private class SubjectAverage
+    private sealed class SubjectAverage
     {
-        public string SubjectName { get; set; } = string.Empty;
-        public double Average { get; set; }
+        public string SubjectName { get; init; } = string.Empty;
+        public double Average { get; init; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -200,23 +190,30 @@
 
     private async Task LoadStudentGrades()
     {
-        showForm = false;
-        errorMessage = null;
-        pageMessage = null;
+        CloseForm();
+        PageMessage = null;
         filterFrom = null;
         filterTo = null;
+        selectedStudent = null;
+        studentGrades = null;
+        subjectAverages = new List<SubjectAverage>();
+        overallAverage = null;
+        filteredGrades = new List<Grade>();
 
         if (selectedStudentId == 0)
         {
-            selectedStudent = null;
-            studentGrades = null;
-            subjectAverages = null;
-            overallAverage = null;
-            filteredGrades = new List<Grade>();
             return;
         }
 
         selectedStudent = await StudentService.GetByIdAsync(selectedStudentId);
+        if (selectedStudent == null)
+        {
+            PageMessage = UiMessages.StudentNotFound;
+            selectedStudentId = 0;
+            students = await StudentService.GetAllAsync();
+            return;
+        }
+
         await ReloadGradesAsync();
     }
 
@@ -260,13 +257,7 @@
 
     private void CalculateSubjectAverages()
     {
-        if (studentGrades == null)
-        {
-            subjectAverages = null;
-            return;
-        }
-
-        subjectAverages = studentGrades
+        subjectAverages = (studentGrades ?? new List<Grade>())
             .GroupBy(g => g.Subject.Name)
             .Select(group => new SubjectAverage
             {
@@ -279,104 +270,41 @@
 
     private void ShowAddForm()
     {
-        formModel = new() { Date = DateTime.Today, StudentId = selectedStudentId };
-        editingId = null;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        OpenForm(new Grade { Date = DateTime.Today, StudentId = selectedStudentId }, null);
     }
 
     private void ShowEditForm(Grade grade)
     {
-        formModel = new Grade
+        OpenForm(new Grade
         {
             Id = grade.Id,
             Value = grade.Value,
             Date = grade.Date,
             SubjectId = grade.SubjectId,
             StudentId = grade.StudentId
-        };
-        editingId = grade.Id;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        }, grade.Id);
     }
 
-    private void CancelForm()
+    private Task HandleSave()
     {
-        showForm = false;
-        errorMessage = null;
+        return SaveFormAsync(EditingId == null ? "AddGrade" : "UpdateGrade", SaveGradeAsync, ReloadGradesAsync);
     }
 
-    private async Task HandleSave()
+    private async Task<bool> SaveGradeAsync()
     {
-        formModel.StudentId = selectedStudentId;
-
-        try
+        if (EditingId == null)
         {
-            var saved = true;
+            await GradeService.AddAsync(FormModel);
+            return true;
+        }
 
-            if (editingId == null)
-            {
-                await GradeService.AddAsync(formModel);
-            }
-            else
-            {
-                formModel.Id = editingId.Value;
-                saved = await GradeService.UpdateAsync(formModel);
-            }
-
-            await ReloadGradesAsync();
-            showForm = false;
-            errorMessage = null;
-            pageMessage = saved ? null : NotFoundMessage;
-        }
-        catch (ArgumentException ex)
-        {
-            errorMessage = ex.Message;
-        }
-        catch (Exception)
-        {
-            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return await GradeService.UpdateAsync(FormModel);
     }
 
-    private async Task HandleDelete(int id)
+    private Task HandleDelete(int id)
     {
-        pageMessage = null;
-
-        var result = await AdminGuard.ConfirmAdminActionAsync("Удалить эту оценку?");
-        if (result == null)
-        {
-            pageMessage = "У вас нет прав для удаления.";
-            return;
-        }
-        if (result != true)
-        {
-            return;
-        }
-
-        try
-        {
-            var deleted = await GradeService.DeleteAsync(id);
-            await ReloadGradesAsync();
-            if (!deleted)
-            {
-                pageMessage = NotFoundMessage;
-            }
-        }
-        catch (Exception)
-        {
-            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return RunAdminActionAsync("Удалить эту оценку?", "DeleteGrade", id, () => GradeService.DeleteAsync(id), ReloadGradesAsync);
     }
 
-    private RenderFragment GetGradeBadge(int value) => builder =>
-    {
-        var cssClass = value <= 4 ? "low" : value <= 7 ? "mid" : "high";
-        builder.OpenElement(0, "span");
-        builder.AddAttribute(1, "class", $"grade-badge {cssClass}");
-        builder.AddContent(2, value);
-        builder.CloseElement();
-    };
+    private static string GradeBadgeClass(int value) => value <= 4 ? "low" : value <= 7 ? "mid" : "high";
 }

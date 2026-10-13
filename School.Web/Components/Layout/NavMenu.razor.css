@@ -1,9 +1,10 @@
-.navbar-brand {
+.nav-brand {
     font-family: var(--font-display);
     font-size: 1.3rem;
     color: #FAF8F3;
     padding: 1.25rem 1.5rem;
     display: block;
+    text-decoration: none;
 }
 
 .nav-item {
@@ -16,6 +17,7 @@
         display: flex;
         align-items: center;
         border-radius: 0;
+        text-decoration: none;
     }
 
         .nav-item ::deep .nav-link.active {
@@ -29,31 +31,27 @@
             color: #FAF8F3;
             background-color: rgba(255, 255, 255, 0.05);
         }
-.navbar-toggler {
+
+.nav-toggler {
     appearance: none;
     cursor: pointer;
     width: 3.5rem;
     height: 2.5rem;
-    color: white;
     position: absolute;
-    top: 0.5rem;
+    top: 0.75rem;
     right: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28250, 248, 243, 0.85%29' stroke-linecap='round' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center / 1.75rem rgba(255, 255, 255, 0.1);
 }
 
-@media (min-width: 641px) {
-    .navbar-toggler {
-        display: none;
+    .nav-toggler:checked {
+        background-color: rgba(255, 255, 255, 0.2);
     }
-}
+
 .nav-account {
     padding: 1.25rem 1.5rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
 }
 
 .nav-account-info {
@@ -72,6 +70,7 @@
     font-size: 0.8rem;
     color: #C9C5B8;
 }
+
 .nav-account ::deep .nav-link {
     color: #C9C5B8;
     padding: 0.4rem 0;
@@ -89,3 +88,28 @@
     .nav-account .btn-link-action:hover {
         color: #FAF8F3;
     }
+
+@media (max-width: 640.98px) {
+    .nav-scrollable,
+    .nav-account {
+        display: none;
+    }
+
+    .nav-toggler:checked ~ .nav-scrollable,
+    .nav-toggler:checked ~ .nav-account {
+        display: block;
+    }
+}
+
+@media (min-width: 641px) {
+    .nav-toggler {
+        display: none;
+    }
+
+    .nav-account {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+    }
+}

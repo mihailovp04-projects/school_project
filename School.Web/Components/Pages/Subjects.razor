@@ -1,36 +1,36 @@
-﻿@page "/subjects"
+@page "/subjects"
 @attribute [Authorize]
+@inherits CrudPage<Subject>
 @inject ISubjectService SubjectService
-@inject AdminGuard AdminGuard
 
 <div class="page-header">
     <h1>Предметы</h1>
 </div>
 
 <div class="toolbar">
-    @if (!showForm)
+    @if (!IsFormVisible)
     {
         <button class="btn-primary" @onclick="ShowAddForm">Добавить предмет</button>
     }
 </div>
 
-@if (!string.IsNullOrEmpty(pageMessage))
+@if (!string.IsNullOrEmpty(PageMessage))
 {
-    <p class="form-error">@pageMessage</p>
+    <p class="form-error">@PageMessage</p>
 }
 
-@if (showForm)
+@if (IsFormVisible)
 {
     <EntityFormCard TItem="Subject"
-                     Title="@(editingId == null ? "Новый предмет" : "Редактирование предмета")"
-                     Model="formModel"
-                     OnSave="HandleSave"
-                     OnCancel="CancelForm"
-                     ErrorMessage="@errorMessage"
-                     FormName="SubjectForm">
+                    Title="@(EditingId == null ? "Новый предмет" : "Редактирование предмета")"
+                    Model="FormModel"
+                    OnSave="HandleSave"
+                    OnCancel="CloseForm"
+                    ErrorMessage="@FormError"
+                    FormName="SubjectForm">
         <div class="form-group">
             <label>Название предмета</label>
-            <InputText @bind-Value="formModel.Name" placeholder="Например, Математика" />
+            <InputText @bind-Value="FormModel.Name" placeholder="Например, Математика" />
         </div>
     </EntityFormCard>
 }
@@ -76,106 +76,46 @@ else
 }
 
 @code {
-    private const string NotFoundMessage = "Запись не найдена: возможно, её уже удалил другой пользователь. Список обновлён.";
-
     private List<Subject>? subjects;
-    private Subject formModel = new();
-    private int? editingId;
-    private bool showForm = false;
-    private string? errorMessage;
-    private string? pageMessage;
 
     protected override async Task OnInitializedAsync()
+    {
+        await ReloadSubjectsAsync();
+    }
+
+    private async Task ReloadSubjectsAsync()
     {
         subjects = await SubjectService.GetAllAsync();
     }
 
     private void ShowAddForm()
     {
-        formModel = new();
-        editingId = null;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        OpenForm(new Subject(), null);
     }
 
     private void ShowEditForm(Subject subject)
     {
-        formModel = new Subject { Id = subject.Id, Name = subject.Name };
-        editingId = subject.Id;
-        showForm = true;
-        errorMessage = null;
-        pageMessage = null;
+        OpenForm(new Subject { Id = subject.Id, Name = subject.Name }, subject.Id);
     }
 
-    private void CancelForm()
+    private Task HandleSave()
     {
-        showForm = false;
-        errorMessage = null;
+        return SaveFormAsync(EditingId == null ? "AddSubject" : "UpdateSubject", SaveSubjectAsync, ReloadSubjectsAsync);
     }
 
-    private async Task HandleSave()
+    private async Task<bool> SaveSubjectAsync()
     {
-        try
+        if (EditingId == null)
         {
-            var saved = true;
+            await SubjectService.AddAsync(FormModel);
+            return true;
+        }
 
-            if (editingId == null)
-            {
-                await SubjectService.AddAsync(formModel);
-            }
-            else
-            {
-                formModel.Id = editingId.Value;
-                saved = await SubjectService.UpdateAsync(formModel);
-            }
-
-            subjects = await SubjectService.GetAllAsync();
-            showForm = false;
-            errorMessage = null;
-            pageMessage = saved ? null : NotFoundMessage;
-        }
-        catch (ArgumentException ex)
-        {
-            errorMessage = ex.Message;
-        }
-        catch (Exception)
-        {
-            errorMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return await SubjectService.UpdateAsync(FormModel);
     }
 
-    private async Task HandleDelete(int id)
+    private Task HandleDelete(int id)
     {
-        pageMessage = null;
-
-        var result = await AdminGuard.ConfirmAdminActionAsync("Удалить этот предмет?");
-        if (result == null)
-        {
-            pageMessage = "У вас нет прав для удаления.";
-            return;
-        }
-        if (result != true)
-        {
-            return;
-        }
-
-        try
-        {
-            var deleted = await SubjectService.DeleteAsync(id);
-            subjects = await SubjectService.GetAllAsync();
-            if (!deleted)
-            {
-                pageMessage = NotFoundMessage;
-            }
-        }
-        catch (ArgumentException ex)
-        {
-            pageMessage = ex.Message;
-        }
-        catch (Exception)
-        {
-            pageMessage = "Что-то пошло не так, попробуйте ещё раз.";
-        }
+        return RunAdminActionAsync("Удалить этот предмет?", "DeleteSubject", id, () => SubjectService.DeleteAsync(id), ReloadSubjectsAsync);
     }
 }
