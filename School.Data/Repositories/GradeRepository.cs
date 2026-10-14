@@ -23,6 +23,14 @@ public class GradeRepository : IGradeRepository
             .ToListAsync();
     }
 
+    public async Task<Grade?> GetByIdAsync(int id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Grades
+            .AsNoTracking()
+            .FirstOrDefaultAsync(g => g.Id == id);
+    }
+
     public async Task AddAsync(Grade grade)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

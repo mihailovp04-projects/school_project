@@ -23,12 +23,14 @@ builder.Services.AddScoped<ISchoolClassRepository, SchoolClassRepository>();
 builder.Services.AddScoped<ISubjectRepository, SubjectRepository>();
 builder.Services.AddScoped<IGradeRepository, GradeRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAcademicTermRepository, AcademicTermRepository>();
 
 builder.Services.AddScoped<IStudentService, StudentService>();
 builder.Services.AddScoped<ISchoolClassService, SchoolClassService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IGradeService, GradeService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IAcademicTermService, AcademicTermService>();
 
 builder.Services.AddScoped<AdminGuard>();
 

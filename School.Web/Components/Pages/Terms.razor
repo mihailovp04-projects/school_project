@@ -1,0 +1,164 @@
+@page "/terms"
+@attribute [Authorize]
+@inherits CrudPage<AcademicTerm>
+@inject IAcademicTermService TermService
+
+<div class="page-header">
+    <h1>Учебные периоды</h1>
+    <p class="muted">Оценку можно поставить только на дату внутри периода. В закрытом периоде оценки менять нельзя.</p>
+</div>
+
+<div class="toolbar">
+    @if (!IsFormVisible)
+    {
+        <button class="btn-primary" @onclick="ShowAddForm">Добавить период</button>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(PageMessage))
+{
+    <p class="form-error">@PageMessage</p>
+}
+
+@if (IsFormVisible)
+{
+    <EntityFormCard TItem="AcademicTerm"
+                    Title="@(EditingId == null ? "Новый период" : "Редактирование периода")"
+                    Model="FormModel"
+                    OnSave="HandleSave"
+                    OnCancel="CloseForm"
+                    ErrorMessage="@FormError"
+                    FormName="TermForm">
+        <div class="form-group">
+            <label>Название</label>
+            <InputText @bind-Value="FormModel.Name" placeholder="Например, I четверть" />
+        </div>
+
+        <div class="form-group">
+            <label>Начало</label>
+            <InputDate @bind-Value="FormModel.StartDate" />
+        </div>
+
+        <div class="form-group">
+            <label>Окончание</label>
+            <InputDate @bind-Value="FormModel.EndDate" />
+        </div>
+    </EntityFormCard>
+}
+
+@if (terms == null)
+{
+    <p class="muted">Загрузка...</p>
+}
+else if (terms.Count == 0)
+{
+    <div class="empty-state">Учебных периодов пока нет.</div>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Название</th>
+                    <th>Начало</th>
+                    <th>Окончание</th>
+                    <th>Статус</th>
+                    <th>Оценок</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in terms)
+                {
+                    var term = item.Term;
+                    <tr>
+                        <td>@term.Name</td>
+                        <td>@term.StartDate.ToShortDateString()</td>
+                        <td>@term.EndDate.ToShortDateString()</td>
+                        <td>
+                            <span class="status-badge @(term.IsClosed ? "closed" : "open")">@(term.IsClosed ? "Закрыт" : "Открыт")</span>
+                        </td>
+                        <td>@item.GradeCount</td>
+                        <td>
+                            <div class="table-actions">
+                                @if (!term.IsClosed)
+                                {
+                                    <button class="btn-link-action" @onclick="() => ShowEditForm(term)">Изменить</button>
+                                }
+                                <AuthorizeView Roles="Admin">
+                                    <Authorized>
+                                        <button class="btn-link-action" @onclick="() => HandleToggleClosed(term)">@(term.IsClosed ? "Открыть" : "Закрыть")</button>
+                                        <button class="btn-link-action danger" @onclick="() => HandleDelete(term.Id)">Удалить</button>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<AcademicTermSummary>? terms;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadTermsAsync();
+    }
+
+    private async Task ReloadTermsAsync()
+    {
+        terms = await TermService.GetAllAsync();
+    }
+
+    private void ShowAddForm()
+    {
+        OpenForm(new AcademicTerm { StartDate = DateTime.Today, EndDate = DateTime.Today.AddMonths(2) }, null);
+    }
+
+    private void ShowEditForm(AcademicTerm term)
+    {
+        OpenForm(new AcademicTerm
+        {
+            Id = term.Id,
+            Name = term.Name,
+            StartDate = term.StartDate,
+            EndDate = term.EndDate,
+            IsClosed = term.IsClosed
+        }, term.Id);
+    }
+
+    private Task HandleSave()
+    {
+        return SaveFormAsync(EditingId == null ? "AddTerm" : "UpdateTerm", SaveTermAsync, ReloadTermsAsync);
+    }
+
+    private async Task<bool> SaveTermAsync()
+    {
+        if (EditingId == null)
+        {
+            await TermService.AddAsync(FormModel);
+            return true;
+        }
+
+        return await TermService.UpdateAsync(FormModel);
+    }
+
+    private Task HandleToggleClosed(AcademicTerm term)
+    {
+        var closing = !term.IsClosed;
+        var question = closing
+            ? $"Закрыть период «{term.Name}»? Оценки в нём больше нельзя будет менять."
+            : $"Открыть период «{term.Name}»? Оценки в нём снова можно будет менять.";
+        var id = term.Id;
+        return RunAdminActionAsync(question, closing ? "CloseTerm" : "OpenTerm", id, () => TermService.SetClosedAsync(id, closing), ReloadTermsAsync);
+    }
+
+    private Task HandleDelete(int id)
+    {
+        return RunAdminActionAsync("Удалить этот период?", "DeleteTerm", id, () => TermService.DeleteAsync(id), ReloadTermsAsync);
+    }
+}

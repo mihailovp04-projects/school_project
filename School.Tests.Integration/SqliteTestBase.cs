@@ -1,4 +1,4 @@
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using School.Data;
 using School.Domain;
@@ -62,7 +62,7 @@ public abstract class SqliteTestBase : IDisposable
         return student;
     }
 
-    protected async Task<Grade> SeedGradeAsync(int studentId, int subjectId, int value = 8)
+    protected async Task<Grade> SeedGradeAsync(int studentId, int subjectId, int value = 8, DateTime? date = null)
     {
         await using var context = CreateContext();
         var grade = new Grade
@@ -70,7 +70,7 @@ public abstract class SqliteTestBase : IDisposable
             StudentId = studentId,
             SubjectId = subjectId,
             Value = value,
-            Date = new DateTime(2026, 10, 1)
+            Date = date ?? new DateTime(2026, 10, 1)
         };
         context.Grades.Add(grade);
         await context.SaveChangesAsync();

@@ -132,6 +132,24 @@ table thead {
         color: #3E6B45;
     }
 
+.status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+    .status-badge.open {
+        background-color: #DCE8D9;
+        color: #3E6B45;
+    }
+
+    .status-badge.closed {
+        background-color: #E4E1D8;
+        color: var(--color-muted);
+    }
+
 .page-header {
     margin-bottom: 1.75rem;
     display: inline-block;

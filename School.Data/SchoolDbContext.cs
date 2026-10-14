@@ -14,6 +14,7 @@ public class SchoolDbContext : DbContext
     public DbSet<Subject> Subjects { get; set; } = null!;
     public DbSet<Grade> Grades { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
+    public DbSet<AcademicTerm> AcademicTerms { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +60,10 @@ public class SchoolDbContext : DbContext
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Login)
+            .IsUnique();
+
+        modelBuilder.Entity<AcademicTerm>()
+            .HasIndex(t => t.Name)
             .IsUnique();
     }
 }

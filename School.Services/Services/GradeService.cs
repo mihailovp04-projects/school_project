@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using School.Data.Contracts.Repositories;
 using School.Domain;
 using School.Services.Validation;
@@ -7,14 +7,22 @@ namespace School.Services.Services;
 
 public class GradeService : IGradeService
 {
+    private const string OutsideTermsMessage = "Дата оценки не попадает ни в один учебный период. Сначала создайте период на странице «Учебные периоды».";
+
     private readonly IGradeRepository _gradeRepository;
     private readonly IStudentRepository _studentRepository;
+    private readonly IAcademicTermRepository _termRepository;
     private readonly ILogger<GradeService> _logger;
 
-    public GradeService(IGradeRepository gradeRepository, IStudentRepository studentRepository, ILogger<GradeService> logger)
+    public GradeService(
+        IGradeRepository gradeRepository,
+        IStudentRepository studentRepository,
+        IAcademicTermRepository termRepository,
+        ILogger<GradeService> logger)
     {
         _gradeRepository = gradeRepository;
         _studentRepository = studentRepository;
+        _termRepository = termRepository;
         _logger = logger;
     }
 
@@ -37,6 +45,7 @@ public class GradeService : IGradeService
 
     public async Task AddAsync(Grade grade)
     {
+        grade.Date = grade.Date.Date;
         await ValidateGradeAsync(grade);
         await _gradeRepository.AddAsync(grade);
         _logger.LogInformation("Grade added: StudentId {StudentId}, SubjectId {SubjectId}, Value {Value}", grade.StudentId, grade.SubjectId, grade.Value);
@@ -44,7 +53,17 @@ public class GradeService : IGradeService
 
     public async Task<bool> UpdateAsync(Grade grade)
     {
+        grade.Date = grade.Date.Date;
         await ValidateGradeAsync(grade);
+
+        var existing = await _gradeRepository.GetByIdAsync(grade.Id);
+        if (existing == null)
+        {
+            return false;
+        }
+
+        await EnsureNotInClosedTermAsync(existing.Date);
+
         var updated = await _gradeRepository.UpdateAsync(grade);
         if (updated)
         {
@@ -55,6 +74,14 @@ public class GradeService : IGradeService
 
     public async Task<bool> DeleteAsync(int id)
     {
+        var existing = await _gradeRepository.GetByIdAsync(id);
+        if (existing == null)
+        {
+            return false;
+        }
+
+        await EnsureNotInClosedTermAsync(existing.Date);
+
         var deleted = await _gradeRepository.DeleteAsync(id);
         if (deleted)
         {
@@ -77,5 +104,27 @@ public class GradeService : IGradeService
         {
             throw new ArgumentException("Этот предмет не привязан к классу ученика.");
         }
+
+        var term = await _termRepository.GetByDateAsync(grade.Date);
+        if (term == null)
+        {
+            throw new ArgumentException(OutsideTermsMessage);
+        }
+
+        if (term.IsClosed)
+        {
+            throw new ArgumentException(ClosedTermMessage(term.Name));
+        }
     }
+
+    private async Task EnsureNotInClosedTermAsync(DateTime date)
+    {
+        var term = await _termRepository.GetByDateAsync(date);
+        if (term is { IsClosed: true })
+        {
+            throw new ArgumentException(ClosedTermMessage(term.Name));
+        }
+    }
+
+    private static string ClosedTermMessage(string termName) => $"Период «{termName}» закрыт: оценки в нём менять нельзя.";
 }

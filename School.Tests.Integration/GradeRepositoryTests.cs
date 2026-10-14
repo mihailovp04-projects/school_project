@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using School.Data.Repositories;
 using School.Domain;
 
@@ -28,6 +28,28 @@ public class GradeRepositoryTests : SqliteTestBase
 
         Assert.Equal(2, grades.Count);
         Assert.All(grades, g => Assert.Equal("Математика", g.Subject.Name));
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ExistingGrade_ReturnsGrade()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        var student = await SeedStudentAsync(schoolClass.Id);
+        var subject = await SeedSubjectAsync("Математика");
+        var grade = await SeedGradeAsync(student.Id, subject.Id, 6);
+
+        var loaded = await _repository.GetByIdAsync(grade.Id);
+
+        Assert.NotNull(loaded);
+        Assert.Equal(6, loaded.Value);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_MissingGrade_ReturnsNull()
+    {
+        var loaded = await _repository.GetByIdAsync(999);
+
+        Assert.Null(loaded);
     }
 
     [Fact]

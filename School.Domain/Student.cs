@@ -28,13 +28,13 @@ public class Student : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (BirthDate == default || BirthDate > DateTime.UtcNow)
+        if (BirthDate == default || BirthDate.Date > DateTime.Today)
         {
             yield return new ValidationResult(
                 "Укажите корректную дату рождения (не в будущем).",
                 new[] { nameof(BirthDate) });
         }
-        else if (BirthDate < DateTime.UtcNow.AddYears(-100))
+        else if (BirthDate.Date < DateTime.Today.AddYears(-100))
         {
             yield return new ValidationResult(
                 "Дата рождения выглядит некорректной.",
