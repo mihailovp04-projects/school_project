@@ -31,6 +31,51 @@ public class GradeRepositoryTests : SqliteTestBase
     }
 
     [Fact]
+    public async Task GetStatsForClassAsync_GroupsByStudentAndSubjectWithinPeriod()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        var otherClass = await SeedClassAsync("6-Б");
+        var ivanov = await SeedStudentAsync(schoolClass.Id, "Иванов");
+        var petrov = await SeedStudentAsync(schoolClass.Id, "Петров");
+        var stranger = await SeedStudentAsync(otherClass.Id, "Сидоров");
+        var math = await SeedSubjectAsync("Математика");
+        var history = await SeedSubjectAsync("История");
+        var start = new DateTime(2026, 9, 1);
+        var end = new DateTime(2026, 10, 31);
+        await SeedGradeAsync(ivanov.Id, math.Id, 8, start);
+        await SeedGradeAsync(ivanov.Id, math.Id, 9, end);
+        await SeedGradeAsync(ivanov.Id, history.Id, 7, new DateTime(2026, 10, 10));
+        await SeedGradeAsync(petrov.Id, math.Id, 5, new DateTime(2026, 9, 20));
+        await SeedGradeAsync(ivanov.Id, math.Id, 2, new DateTime(2026, 11, 1));
+        await SeedGradeAsync(stranger.Id, math.Id, 10, new DateTime(2026, 9, 20));
+
+        var stats = await _repository.GetStatsForClassAsync(schoolClass.Id, start, end);
+
+        Assert.Equal(3, stats.Count);
+        var ivanovMath = Assert.Single(stats, s => s.StudentId == ivanov.Id && s.SubjectId == math.Id);
+        Assert.Equal(17, ivanovMath.Sum);
+        Assert.Equal(2, ivanovMath.Count);
+        var ivanovHistory = Assert.Single(stats, s => s.StudentId == ivanov.Id && s.SubjectId == history.Id);
+        Assert.Equal(7, ivanovHistory.Sum);
+        var petrovMath = Assert.Single(stats, s => s.StudentId == petrov.Id);
+        Assert.Equal(5, petrovMath.Sum);
+        Assert.Equal(1, petrovMath.Count);
+    }
+
+    [Fact]
+    public async Task GetStatsForClassAsync_NoGradesInPeriod_ReturnsEmpty()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        var student = await SeedStudentAsync(schoolClass.Id);
+        var subject = await SeedSubjectAsync("Математика");
+        await SeedGradeAsync(student.Id, subject.Id, 8, new DateTime(2026, 8, 31));
+
+        var stats = await _repository.GetStatsForClassAsync(schoolClass.Id, new DateTime(2026, 9, 1), new DateTime(2026, 10, 31));
+
+        Assert.Empty(stats);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_ExistingGrade_ReturnsGrade()
     {
         var schoolClass = await SeedClassAsync("5-А");

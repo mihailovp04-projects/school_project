@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using School.Data.Contracts.Exceptions;
 using School.Data.Repositories;
 using School.Domain;
@@ -105,6 +105,28 @@ public class SchoolClassRepositoryTests : SqliteTestBase
         Assert.False(await _repository.ExistsByNameAsync("5-А", schoolClass.Id));
         Assert.True(await _repository.ExistsByNameAsync("5-А", other.Id));
         Assert.False(await _repository.ExistsByNameAsync("9-В"));
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ExistingClass_ReturnsClassWithSubjects()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        var subject = await SeedSubjectAsync("Математика");
+        await AssignSubjectAsync(schoolClass.Id, subject.Id);
+
+        var loaded = await _repository.GetByIdAsync(schoolClass.Id);
+
+        Assert.NotNull(loaded);
+        Assert.Equal("5-А", loaded.Name);
+        Assert.Single(loaded.Subjects);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_MissingClass_ReturnsNull()
+    {
+        var loaded = await _repository.GetByIdAsync(999);
+
+        Assert.Null(loaded);
     }
 
     [Fact]

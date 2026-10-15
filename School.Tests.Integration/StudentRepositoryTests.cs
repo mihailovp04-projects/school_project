@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using School.Data.Contracts.Exceptions;
 using School.Data.Repositories;
 using School.Domain;
@@ -80,6 +80,20 @@ public class StudentRepositoryTests : SqliteTestBase
         var loaded = await _repository.GetByIdAsync(999);
 
         Assert.Null(loaded);
+    }
+
+    [Fact]
+    public async Task GetByClassIdAsync_ReturnsOnlyClassStudentsSortedByName()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        var otherClass = await SeedClassAsync("6-Б");
+        await SeedStudentAsync(schoolClass.Id, "Петров");
+        await SeedStudentAsync(otherClass.Id, "Абрамов");
+        await SeedStudentAsync(schoolClass.Id, "Иванов");
+
+        var students = await _repository.GetByClassIdAsync(schoolClass.Id);
+
+        Assert.Equal(new[] { "Иванов", "Петров" }, students.Select(s => s.LastName).ToArray());
     }
 
     [Fact]

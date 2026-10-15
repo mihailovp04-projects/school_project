@@ -8,6 +8,7 @@ using School.Data;
 using School.Data.Contracts.Repositories;
 using School.Data.Repositories;
 using School.Domain;
+using School.Services.Reports;
 using School.Services.Security;
 using School.Services.Services;
 using School.Web.Components;
@@ -31,6 +32,7 @@ builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IGradeService, GradeService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAcademicTermService, AcademicTermService>();
+builder.Services.AddScoped<ITermReportService, TermReportService>();
 
 builder.Services.AddScoped<AdminGuard>();
 

@@ -364,6 +364,23 @@ table thead {
     color: #e50000;
 }
 
+.report-table th.number,
+.report-table td.number {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.report-table tfoot td {
+    font-weight: 600;
+    border-top: 2px solid var(--color-ink);
+    background-color: rgba(43, 58, 50, 0.04);
+}
+
+.final-grade {
+    color: var(--color-muted);
+    margin-left: 0.3rem;
+}
+
 .table-actions {
     display: flex;
     gap: 0.9rem;

@@ -5,6 +5,7 @@ namespace School.Data.Contracts.Repositories;
 public interface ISchoolClassRepository
 {
     Task<List<SchoolClass>> GetAllAsync();
+    Task<SchoolClass?> GetByIdAsync(int id);
     Task AddAsync(SchoolClass schoolClass);
     Task<bool> UpdateAsync(SchoolClass schoolClass);
     Task<bool> DeleteAsync(int id);

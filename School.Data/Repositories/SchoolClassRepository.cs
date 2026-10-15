@@ -23,6 +23,15 @@ public class SchoolClassRepository : ISchoolClassRepository
             .ToListAsync();
     }
 
+    public async Task<SchoolClass?> GetByIdAsync(int id)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.SchoolClasses
+            .Include(c => c.Subjects)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
+    }
+
     public async Task AddAsync(SchoolClass schoolClass)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();

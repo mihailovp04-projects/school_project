@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using School.Data.Contracts.Models;
 using School.Data.Contracts.Repositories;
 using School.Domain;
 
@@ -29,6 +30,26 @@ public class GradeRepository : IGradeRepository
         return await context.Grades
             .AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == id);
+    }
+
+    public async Task<List<GradeStat>> GetStatsForClassAsync(int schoolClassId, DateTime startDate, DateTime endDate)
+    {
+        var start = startDate.Date;
+        var end = endDate.Date;
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var rows = await context.Grades
+            .Where(g => g.Student.SchoolClassId == schoolClassId && g.Date >= start && g.Date <= end)
+            .GroupBy(g => new { g.StudentId, g.SubjectId })
+            .Select(group => new
+            {
+                group.Key.StudentId,
+                group.Key.SubjectId,
+                Sum = group.Sum(g => g.Value),
+                Count = group.Count()
+            })
+            .ToListAsync();
+
+        return rows.Select(r => new GradeStat(r.StudentId, r.SubjectId, r.Sum, r.Count)).ToList();
     }
 
     public async Task AddAsync(Grade grade)

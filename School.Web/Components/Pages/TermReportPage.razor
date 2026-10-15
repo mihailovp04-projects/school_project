@@ -1,0 +1,150 @@
+@page "/report/term"
+@attribute [Authorize]
+@inherits PageBase
+@inject ITermReportService ReportService
+@inject IAcademicTermService TermService
+@inject ISchoolClassService SchoolClassService
+
+<div class="page-header">
+    <h1>Табель успеваемости</h1>
+    <p class="muted">Средний балл ученика по каждому предмету за выбранный период. В скобках — итоговая оценка.</p>
+</div>
+
+<div class="selector-row">
+    <label>Период:</label>
+    <select @bind="selectedTermId" @bind:after="LoadReportAsync">
+        <option value="0">-- выберите период --</option>
+        @foreach (var term in terms)
+        {
+            <option value="@term.Id">@term.Name</option>
+        }
+    </select>
+
+    <label>Класс:</label>
+    <select @bind="selectedClassId" @bind:after="LoadReportAsync">
+        <option value="0">-- выберите класс --</option>
+        @foreach (var schoolClass in schoolClasses)
+        {
+            <option value="@schoolClass.Id">@schoolClass.Name</option>
+        }
+    </select>
+</div>
+
+@if (!string.IsNullOrEmpty(PageMessage))
+{
+    <p class="form-error">@PageMessage</p>
+}
+
+@if (selectedTermId == 0 || selectedClassId == 0)
+{
+    <div class="empty-state">Выберите период и класс.</div>
+}
+else if (report == null)
+{
+    @if (string.IsNullOrEmpty(PageMessage))
+    {
+        <p class="muted">Загрузка...</p>
+    }
+}
+else if (report.Rows.Count == 0)
+{
+    <div class="empty-state">В классе «@report.SchoolClass.Name» пока нет учеников.</div>
+}
+else if (!report.HasGrades)
+{
+    <div class="empty-state">За период «@report.Term.Name» у класса «@report.SchoolClass.Name» нет оценок.</div>
+}
+else
+{
+    <p class="section-title">
+        @report.SchoolClass.Name · @report.Term.Name (@report.Term.StartDate.ToShortDateString() — @report.Term.EndDate.ToShortDateString())
+    </p>
+
+    <div class="table-container">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Ученик</th>
+                    @foreach (var subject in report.Subjects)
+                    {
+                        <th class="number">@subject.Name</th>
+                    }
+                    <th class="number">Средний</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in report.Rows)
+                {
+                    <tr>
+                        <td>@row.StudentName</td>
+                        @foreach (var subject in report.Subjects)
+                        {
+                            <td class="number">@FormatAverage(row.SubjectAverages[subject.Id])</td>
+                        }
+                        <td class="number">
+                            @FormatAverage(row.Average)
+                            @if (row.FinalGrade.HasValue)
+                            {
+                                <span class="final-grade">(@row.FinalGrade)</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>Средний по классу</td>
+                    @foreach (var subject in report.Subjects)
+                    {
+                        <td class="number">@FormatAverage(report.SubjectAverages[subject.Id])</td>
+                    }
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+@code {
+    private List<AcademicTerm> terms = new();
+    private List<SchoolClass> schoolClasses = new();
+    private int selectedTermId;
+    private int selectedClassId;
+    private TermReport? report;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSelectorsAsync();
+    }
+
+    private async Task LoadSelectorsAsync()
+    {
+        terms = (await TermService.GetAllAsync()).Select(t => t.Term).ToList();
+        schoolClasses = (await SchoolClassService.GetAllAsync()).OrderBy(c => c.Name).ToList();
+    }
+
+    private async Task LoadReportAsync()
+    {
+        PageMessage = null;
+        report = null;
+
+        if (selectedTermId == 0 || selectedClassId == 0)
+        {
+            return;
+        }
+
+        await ReloadAsync(async () =>
+        {
+            report = await ReportService.BuildAsync(selectedTermId, selectedClassId);
+            if (report == null)
+            {
+                PageMessage = UiMessages.NotFound;
+                selectedTermId = 0;
+                selectedClassId = 0;
+                await LoadSelectorsAsync();
+            }
+        });
+    }
+
+    private static string FormatAverage(double? value) => value.HasValue ? value.Value.ToString("F2") : string.Empty;
+}

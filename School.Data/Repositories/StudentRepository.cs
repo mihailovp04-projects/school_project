@@ -32,6 +32,17 @@ public class StudentRepository : IStudentRepository
             .FirstOrDefaultAsync(s => s.Id == id);
     }
 
+    public async Task<List<Student>> GetByClassIdAsync(int schoolClassId)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Students
+            .Where(s => s.SchoolClassId == schoolClassId)
+            .OrderBy(s => s.LastName)
+            .ThenBy(s => s.FirstName)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Student student)
     {
         await using var context = await _contextFactory.CreateDbContextAsync();
