@@ -104,6 +104,12 @@ table thead {
         color: var(--color-ink);
     }
 
+a.btn-primary,
+a.btn-secondary {
+    display: inline-block;
+    text-decoration: none;
+}
+
 .grade-badge {
     display: inline-flex;
     align-items: center;
@@ -374,6 +380,11 @@ table thead {
     font-weight: 600;
     border-top: 2px solid var(--color-ink);
     background-color: rgba(43, 58, 50, 0.04);
+}
+
+.report-title {
+    margin: 0;
+    flex: 1;
 }
 
 .final-grade {

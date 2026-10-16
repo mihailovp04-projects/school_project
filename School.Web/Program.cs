@@ -149,6 +149,17 @@ app.MapPost("/Account/Logout", async (HttpContext httpContext) =>
     return Results.Redirect("/");
 });
 
+app.MapGet("/report/term.csv", async (int termId, int classId, ITermReportService reportService) =>
+{
+    var report = await reportService.BuildAsync(termId, classId);
+    if (report == null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.File(TermReportCsv.Build(report), "text/csv; charset=utf-8", TermReportCsv.BuildFileName(report));
+}).RequireAuthorization();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

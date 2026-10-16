@@ -56,9 +56,12 @@ else if (!report.HasGrades)
 }
 else
 {
-    <p class="section-title">
-        @report.SchoolClass.Name · @report.Term.Name (@report.Term.StartDate.ToShortDateString() — @report.Term.EndDate.ToShortDateString())
-    </p>
+    <div class="toolbar">
+        <p class="section-title report-title">
+            @report.SchoolClass.Name · @report.Term.Name (@report.Term.StartDate.ToShortDateString() — @report.Term.EndDate.ToShortDateString())
+        </p>
+        <a class="btn-secondary" href="@CsvUrl" download data-enhance-nav="false">Скачать CSV</a>
+    </div>
 
     <div class="table-container">
         <table class="report-table">
@@ -145,6 +148,8 @@ else
             }
         });
     }
+
+    private string CsvUrl => $"/report/term.csv?termId={selectedTermId}&classId={selectedClassId}";
 
     private static string FormatAverage(double? value) => value.HasValue ? value.Value.ToString("F2") : string.Empty;
 }
