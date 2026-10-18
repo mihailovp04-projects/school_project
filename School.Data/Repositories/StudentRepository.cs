@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using School.Data.Contracts.Models;
 using School.Data.Contracts.Repositories;
 using School.Domain;
 
@@ -18,8 +19,46 @@ public class StudentRepository : IStudentRepository
         await using var context = await _contextFactory.CreateDbContextAsync();
         return await context.Students
             .Include(s => s.SchoolClass)
+            .OrderBy(s => s.LastName)
+            .ThenBy(s => s.FirstName)
             .AsNoTracking()
             .ToListAsync();
+    }
+
+    public async Task<PagedResult<Student>> GetPagedAsync(StudentFilter filter, int page, int pageSize)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        IQueryable<Student> query = context.Students.AsNoTracking();
+
+        if (filter.SchoolClassId.HasValue)
+        {
+            var schoolClassId = filter.SchoolClassId.Value;
+            query = query.Where(s => s.SchoolClassId == schoolClassId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.LastName))
+        {
+            var lastName = filter.LastName.Trim();
+            query = query.Where(s => s.LastName.Contains(lastName));
+        }
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .Include(s => s.SchoolClass)
+            .OrderBy(s => s.LastName)
+            .ThenBy(s => s.FirstName)
+            .ThenBy(s => s.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return new PagedResult<Student>(items, totalCount, page, pageSize);
+    }
+
+    public async Task<int> CountAsync()
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.Students.CountAsync();
     }
 
     public async Task<Student?> GetByIdAsync(int id)

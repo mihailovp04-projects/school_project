@@ -49,11 +49,10 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var students = await StudentService.GetAllAsync();
+        studentsCount = await StudentService.CountAsync();
         var classes = await SchoolClassService.GetAllAsync();
         var subjects = await SubjectService.GetAllAsync();
 
-        studentsCount = students.Count;
         classesCount = classes.Count;
         subjectsCount = subjects.Count;
 

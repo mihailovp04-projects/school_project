@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using School.Data.Contracts.Exceptions;
+using School.Data.Contracts.Models;
 using School.Data.Contracts.Repositories;
 using School.Domain;
 using School.Services.Services;
@@ -76,6 +77,63 @@ public class StudentServiceTests
         await _service.AddAsync(student);
 
         _repositoryMock.Verify(r => r.AddAsync(student), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(0, 0, 1, 1)]
+    [InlineData(-3, 500, 1, 100)]
+    [InlineData(2, 20, 2, 20)]
+    public async Task GetPagedAsync_NormalizesPageAndPageSize(int page, int pageSize, int expectedPage, int expectedPageSize)
+    {
+        var filter = new StudentFilter();
+        _repositoryMock
+            .Setup(r => r.GetPagedAsync(filter, expectedPage, expectedPageSize))
+            .ReturnsAsync(new PagedResult<Student>(new List<Student> { new() }, 1, expectedPage, expectedPageSize));
+
+        var result = await _service.GetPagedAsync(filter, page, pageSize);
+
+        Assert.Equal(expectedPage, result.Page);
+        _repositoryMock.Verify(r => r.GetPagedAsync(filter, expectedPage, expectedPageSize), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_PageAfterLast_ReturnsLastPage()
+    {
+        var filter = new StudentFilter();
+        _repositoryMock
+            .Setup(r => r.GetPagedAsync(filter, 5, 2))
+            .ReturnsAsync(new PagedResult<Student>(new List<Student>(), 3, 5, 2));
+        _repositoryMock
+            .Setup(r => r.GetPagedAsync(filter, 2, 2))
+            .ReturnsAsync(new PagedResult<Student>(new List<Student> { new() }, 3, 2, 2));
+
+        var result = await _service.GetPagedAsync(filter, 5, 2);
+
+        Assert.Equal(2, result.Page);
+        Assert.Single(result.Items);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_NoStudents_DoesNotRequestAnotherPage()
+    {
+        var filter = new StudentFilter();
+        _repositoryMock
+            .Setup(r => r.GetPagedAsync(filter, 1, 20))
+            .ReturnsAsync(new PagedResult<Student>(new List<Student>(), 0, 1, 20));
+
+        var result = await _service.GetPagedAsync(filter, 1, 20);
+
+        Assert.Equal(0, result.TotalCount);
+        Assert.Equal(1, result.TotalPages);
+        _repositoryMock.Verify(r => r.GetPagedAsync(It.IsAny<StudentFilter>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CountAsync_ReturnsRepositoryCount()
+    {
+        _repositoryMock.Setup(r => r.CountAsync()).ReturnsAsync(42);
+
+        Assert.Equal(42, await _service.CountAsync());
     }
 
     [Fact]

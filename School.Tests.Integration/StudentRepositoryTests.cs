@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using School.Data.Contracts.Exceptions;
+using School.Data.Contracts.Models;
 using School.Data.Repositories;
 using School.Domain;
 
@@ -105,8 +106,68 @@ public class StudentRepositoryTests : SqliteTestBase
 
         var students = await _repository.GetAllAsync();
 
-        Assert.Equal(2, students.Count);
+        Assert.Equal(new[] { "Иванов", "Петров" }, students.Select(s => s.LastName).ToArray());
         Assert.All(students, s => Assert.Equal("5-А", s.SchoolClass.Name));
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_FiltersByClassAndLastName()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        var otherClass = await SeedClassAsync("6-Б");
+        await SeedStudentAsync(schoolClass.Id, "Иванов");
+        await SeedStudentAsync(schoolClass.Id, "Иваненко");
+        await SeedStudentAsync(schoolClass.Id, "Петров");
+        await SeedStudentAsync(otherClass.Id, "Иванов");
+
+        var byClass = await _repository.GetPagedAsync(new StudentFilter { SchoolClassId = schoolClass.Id }, 1, 10);
+        var byName = await _repository.GetPagedAsync(new StudentFilter { LastName = " Иван " }, 1, 10);
+        var byBoth = await _repository.GetPagedAsync(new StudentFilter { SchoolClassId = schoolClass.Id, LastName = "Иван" }, 1, 10);
+
+        Assert.Equal(3, byClass.TotalCount);
+        Assert.Equal(3, byName.TotalCount);
+        Assert.Equal(2, byBoth.TotalCount);
+        Assert.Equal(new[] { "Иваненко", "Иванов" }, byBoth.Items.Select(s => s.LastName).ToArray());
+        Assert.All(byBoth.Items, s => Assert.Equal("5-А", s.SchoolClass.Name));
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_ReturnsRequestedPageInNameOrder()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        foreach (var lastName in new[] { "Дмитриев", "Абрамов", "Егоров", "Борисов", "Волков" })
+        {
+            await SeedStudentAsync(schoolClass.Id, lastName);
+        }
+
+        var page = await _repository.GetPagedAsync(new StudentFilter(), 2, 2);
+
+        Assert.Equal(5, page.TotalCount);
+        Assert.Equal(3, page.TotalPages);
+        Assert.Equal(2, page.Page);
+        Assert.Equal(new[] { "Волков", "Дмитриев" }, page.Items.Select(s => s.LastName).ToArray());
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_PageAfterLast_ReturnsNoItemsButTotal()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        await SeedStudentAsync(schoolClass.Id);
+
+        var page = await _repository.GetPagedAsync(new StudentFilter(), 3, 10);
+
+        Assert.Empty(page.Items);
+        Assert.Equal(1, page.TotalCount);
+    }
+
+    [Fact]
+    public async Task CountAsync_ReturnsNumberOfStudents()
+    {
+        var schoolClass = await SeedClassAsync("5-А");
+        await SeedStudentAsync(schoolClass.Id, "Иванов");
+        await SeedStudentAsync(schoolClass.Id, "Петров");
+
+        Assert.Equal(2, await _repository.CountAsync());
     }
 
     [Fact]
