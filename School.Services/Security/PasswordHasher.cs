@@ -24,20 +24,22 @@ public static class PasswordHasher
             return false;
         }
 
-        try
-        {
-            var salt = Convert.FromBase64String(parts[1]);
-            var expected = Convert.FromBase64String(parts[2]);
-            var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, Algorithm, expected.Length);
-            return CryptographicOperations.FixedTimeEquals(actual, expected);
-        }
-        catch (FormatException)
+        var salt = DecodeBase64(parts[1]);
+        var expected = DecodeBase64(parts[2]);
+        if (salt == null || expected == null)
         {
             return false;
         }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+
+        var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, Algorithm, expected.Length);
+        return CryptographicOperations.FixedTimeEquals(actual, expected);
+    }
+
+    private static byte[]? DecodeBase64(string value)
+    {
+        var buffer = new byte[value.Length];
+        return Convert.TryFromBase64String(value, buffer, out var written) && written > 0
+            ? buffer[..written]
+            : null;
     }
 }

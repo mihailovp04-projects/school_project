@@ -34,6 +34,9 @@ public class PasswordHasherTests
     [InlineData("not-a-hash")]
     [InlineData("0.AAAA.AAAA")]
     [InlineData("210000.%%%.%%%")]
+    [InlineData("210000..")]
+    [InlineData("210000.AAAA.")]
+    [InlineData("-5.AAAA.AAAA")]
     public void Verify_MalformedHash_ReturnsFalse(string hash)
     {
         Assert.False(PasswordHasher.Verify("password123", hash));
