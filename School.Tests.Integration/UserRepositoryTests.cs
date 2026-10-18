@@ -1,4 +1,4 @@
-using School.Data.Contracts.Exceptions;
+﻿using School.Data.Contracts.Exceptions;
 using School.Data.Repositories;
 using School.Domain;
 
@@ -49,6 +49,41 @@ public class UserRepositoryTests : SqliteTestBase
 
         var users = await _repository.GetAllAsync();
 
-        Assert.Equal(2, users.Count);
+        Assert.Equal(new[] { "admin", "teacher" }, users.Select(u => u.Login).ToArray());
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ExistingAndMissing()
+    {
+        var user = new User { Login = "teacher", PasswordHash = "hash", Role = "Teacher" };
+        await _repository.AddAsync(user);
+
+        var existing = await _repository.GetByIdAsync(user.Id);
+        var missing = await _repository.GetByIdAsync(999);
+
+        Assert.NotNull(existing);
+        Assert.Equal("teacher", existing.Login);
+        Assert.Null(missing);
+    }
+
+    [Fact]
+    public async Task UpdateRoleAsync_ExistingUser_ChangesRole()
+    {
+        var user = new User { Login = "teacher", PasswordHash = "hash", Role = "Teacher" };
+        await _repository.AddAsync(user);
+
+        var updated = await _repository.UpdateRoleAsync(user.Id, "Admin");
+
+        Assert.True(updated);
+        var saved = await _repository.GetByIdAsync(user.Id);
+        Assert.Equal("Admin", saved?.Role);
+    }
+
+    [Fact]
+    public async Task UpdateRoleAsync_MissingUser_ReturnsFalse()
+    {
+        var updated = await _repository.UpdateRoleAsync(999, "Admin");
+
+        Assert.False(updated);
     }
 }

@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +34,7 @@ builder.Services.AddScoped<IAcademicTermService, AcademicTermService>();
 builder.Services.AddScoped<ITermReportService, TermReportService>();
 
 builder.Services.AddScoped<AdminGuard>();
+builder.Services.AddScoped<RoleRefreshCookieEvents>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -44,6 +44,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        options.EventsType = typeof(RoleRefreshCookieEvents);
     });
 builder.Services.AddAuthorization();
 builder.Services.AddCascadingAuthenticationState();
@@ -81,13 +82,7 @@ app.MapPost("/Account/Login", async (HttpContext httpContext, IUserService userS
         return Results.Redirect(failureUrl);
     }
 
-    var claims = new List<Claim>
-    {
-        new(ClaimTypes.Name, user.Login),
-        new(ClaimTypes.Role, user.Role)
-    };
-    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-    await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+    await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, UserPrincipalFactory.Create(user));
 
     return Results.Redirect(IsLocalUrl(returnUrl) ? returnUrl! : "/");
 });
@@ -113,7 +108,7 @@ app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService us
     }
 
     var allUsers = await userService.GetAllAsync();
-    var role = allUsers.Count == 0 ? "Admin" : "Teacher";
+    var role = allUsers.Count == 0 ? Roles.Admin : Roles.Teacher;
 
     var newUser = new User
     {
@@ -132,13 +127,7 @@ app.MapPost("/Account/Register", async (HttpContext httpContext, IUserService us
         return Results.Redirect("/register?error=1");
     }
 
-    var claims = new List<Claim>
-    {
-        new(ClaimTypes.Name, newUser.Login),
-        new(ClaimTypes.Role, newUser.Role)
-    };
-    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-    await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+    await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, UserPrincipalFactory.Create(newUser));
 
     return Results.Redirect("/");
 });

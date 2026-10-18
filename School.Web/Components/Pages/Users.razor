@@ -1,0 +1,86 @@
+@page "/users"
+@attribute [Authorize(Roles = "Admin")]
+@inherits PageBase
+@inject IUserService UserService
+
+<div class="page-header">
+    <h1>Пользователи</h1>
+    <p class="muted">Свою роль изменить нельзя. Новая роль начинает действовать после обновления страницы у этого пользователя.</p>
+</div>
+
+@if (!string.IsNullOrEmpty(PageMessage))
+{
+    <p class="form-error">@PageMessage</p>
+}
+
+@if (users == null)
+{
+    <p class="muted">Загрузка...</p>
+}
+else
+{
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Логин</th>
+                    <th>Роль</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in users)
+                {
+                    <tr>
+                        <td>@user.Login</td>
+                        <td>
+                            <span class="status-badge @(user.Role == Roles.Admin ? "open" : "closed")">@RoleTitle(user.Role)</span>
+                        </td>
+                        <td>
+                            @if (string.Equals(user.Login, currentLogin, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="muted">это вы</span>
+                            }
+                            else
+                            {
+                                var newRole = user.Role == Roles.Admin ? Roles.Teacher : Roles.Admin;
+                                <button class="btn-link-action" @onclick="() => HandleChangeRole(user, newRole)">
+                                    Сделать: @RoleTitle(newRole)
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private List<User>? users;
+    private string currentLogin = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateTask;
+        currentLogin = authState.User.Identity?.Name ?? string.Empty;
+        await ReloadUsersAsync();
+    }
+
+    private async Task ReloadUsersAsync()
+    {
+        users = await UserService.GetAllAsync();
+    }
+
+    private Task HandleChangeRole(User user, string newRole)
+    {
+        var id = user.Id;
+        var question = $"Изменить роль пользователя «{user.Login}» на «{RoleTitle(newRole)}»?";
+        return RunAdminActionAsync(question, "ChangeRole", id, () => UserService.ChangeRoleAsync(id, newRole, currentLogin), ReloadUsersAsync);
+    }
+
+    private static string RoleTitle(string role) => role == Roles.Admin ? "администратор" : "учитель";
+}
